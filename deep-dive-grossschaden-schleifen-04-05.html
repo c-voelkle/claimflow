@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Dive: Schleifen in Schritten 04–05 · Gross- & Komplexschäden CH</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0C0F14;
+    --surface: #151921;
+    --surface-2: #1C2230;
+    --surface-3: #242B38;
+    --text: #E8EAF0;
+    --text-muted: #8B92A5;
+    --text-dim: #5A6175;
+    --accent: #F59E0B;
+    --accent-soft: rgba(245,158,11,0.12);
+    --manual: #EF6461;
+    --manual-bg: rgba(239,100,97,0.1);
+    --automated: #60D394;
+    --automated-bg: rgba(96,211,148,0.1);
+    --hybrid: #7EB6FF;
+    --hybrid-bg: rgba(126,182,255,0.1);
+    --loop: #C084FC;
+    --loop-bg: rgba(192,132,252,0.1);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --glow: rgba(245,158,11,0.15);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1140px; margin: 0 auto; padding: 0 2rem; }
+
+  /* HEADER */
+  header {
+    padding: 4rem 0 3rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 300px;
+    background: radial-gradient(ellipse at 30% 0%, rgba(192,132,252,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .breadcrumb {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--loop);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+  }
+  header h1 span { color: var(--loop); }
+  .subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    max-width: 720px;
+    font-weight: 400;
+  }
+
+  /* STEP NAVIGATION */
+  .step-nav {
+    display: flex;
+    gap: 1px;
+    margin: 2.5rem 0 0;
+    background: var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .step-nav-item {
+    flex: 1;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: center;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .step-nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .step-nav-item.active {
+    background: var(--surface-2);
+    color: var(--loop);
+    box-shadow: inset 0 -2px 0 var(--loop);
+  }
+  .step-nav-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    display: block;
+    margin-bottom: 0.25rem;
+    opacity: 0.5;
+  }
+
+  /* STEP SECTIONS */
+  .step-section {
+    padding: 3rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .step-badge {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem; font-weight: 500; color: #fff;
+    flex-shrink: 0;
+  }
+  .step-badge.loop { background: linear-gradient(135deg, #9333EA, #C084FC); }
+  .step-badge.hybrid { background: linear-gradient(135deg, #5B9BF0, #7EB6FF); }
+  .step-badge.automated { background: linear-gradient(135deg, #3EAF76, #60D394); }
+  .step-header-text h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem; font-weight: 500; margin-bottom: 0.35rem;
+  }
+  .step-header-text .type-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
+    padding: 0.2rem 0.6rem; border-radius: 4px; font-weight: 500;
+  }
+  .type-label.loop { background: var(--loop-bg); color: var(--loop); }
+  .type-label.hybrid { background: var(--hybrid-bg); color: var(--hybrid); }
+
+  /* CONTENT GRID */
+  .content-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .content-grid.single { grid-template-columns: 1fr; }
+  .content-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-cell { padding: 1.5rem; background: var(--surface); }
+  .grid-cell.full { grid-column: 1 / -1; }
+  .cell-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--accent); margin-bottom: 0.6rem; font-weight: 500;
+  }
+  .cell-tag.purple { color: var(--loop); }
+  .cell-body { font-size: 0.88rem; color: var(--text-muted); line-height: 1.7; }
+  .cell-body strong { color: var(--text); font-weight: 600; }
+
+  /* LOOP FLOW DIAGRAM */
+  .loop-flow {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow-x: auto;
+  }
+  .loop-flow-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--loop); margin-bottom: 1.2rem; font-weight: 500;
+  }
+  .flow-row {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex-wrap: wrap; margin-bottom: 0.75rem;
+  }
+  .flow-node {
+    padding: 0.5rem 0.85rem; border-radius: 6px;
+    font-size: 0.75rem; font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-node.step { background: var(--surface-2); border: 1px solid var(--border); color: var(--text); }
+  .flow-node.decision { background: var(--accent-soft); border: 1px solid rgba(245,158,11,0.3); color: var(--accent); }
+  .flow-node.loop-back { background: var(--loop-bg); border: 1px solid rgba(192,132,252,0.3); color: var(--loop); }
+  .flow-node.output { background: var(--automated-bg); border: 1px solid rgba(96,211,148,0.3); color: var(--automated); }
+  .flow-arrow { color: var(--text-dim); font-size: 1rem; flex-shrink: 0; }
+  .flow-arrow.loop-arrow { color: var(--loop); }
+  .flow-label {
+    font-size: 0.65rem; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 0.25rem;
+  }
+
+  /* TOOL CARDS */
+  .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; }
+  .tool-card {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 1.1rem 1.25rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .tool-card:hover { border-color: var(--border-hover); box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+  .tool-name { font-weight: 700; font-size: 0.88rem; margin-bottom: 0.2rem; color: var(--text); }
+  .tool-vendor {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem;
+  }
+  .tool-desc { font-size: 0.78rem; color: var(--text-muted); line-height: 1.55; }
+  .tool-tag {
+    display: inline-block; padding: 0.12rem 0.45rem; border-radius: 3px;
+    font-size: 0.62rem; font-weight: 600; margin-top: 0.5rem;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.04em;
+  }
+  .tool-tag.core { background: var(--accent-soft); color: var(--accent); }
+  .tool-tag.addon { background: var(--hybrid-bg); color: var(--hybrid); }
+  .tool-tag.niche { background: var(--automated-bg); color: var(--automated); }
+  .tool-tag.loop-tag { background: var(--loop-bg); color: var(--loop); }
+  .tool-tag.fraud { background: var(--manual-bg); color: var(--manual); }
+
+  /* CALLOUTS */
+  .callout {
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 1.25rem 1.5rem;
+    margin: 1.25rem 0;
+  }
+  .callout.callout-loop { border-left-color: var(--loop); }
+  .callout-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--accent); margin-bottom: 0.4rem; font-weight: 500;
+  }
+  .callout-loop .callout-title { color: var(--loop); }
+  .callout-body { font-size: 0.84rem; color: var(--text-muted); line-height: 1.65; }
+  .callout-body strong { color: var(--text); }
+
+  /* TIMELINE */
+  .timeline { margin: 1rem 0; }
+  .timeline-item {
+    display: flex; gap: 1rem; padding: 0.75rem 0;
+    position: relative;
+  }
+  .timeline-item::before {
+    content: '';
+    position: absolute; left: 15px; top: 2rem; bottom: 0;
+    width: 1px; background: var(--border);
+  }
+  .timeline-item:last-child::before { display: none; }
+  .timeline-marker {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; font-weight: 600; flex-shrink: 0;
+    position: relative; z-index: 1;
+  }
+  .timeline-marker.initial { background: var(--hybrid-bg); color: var(--hybrid); }
+  .timeline-marker.loop-m { background: var(--loop-bg); color: var(--loop); }
+  .timeline-marker.final { background: var(--automated-bg); color: var(--automated); }
+  .timeline-content h4 {
+    font-size: 0.82rem; font-weight: 700; margin-bottom: 0.15rem;
+  }
+  .timeline-content p {
+    font-size: 0.78rem; color: var(--text-muted); line-height: 1.55;
+  }
+  .timeline-content .timeline-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem; color: var(--text-dim); margin-top: 0.2rem;
+  }
+
+  /* SUBSTEP LIST */
+  .substep-list { list-style: none; margin: 0.5rem 0; }
+  .substep-list li {
+    position: relative; padding: 0.35rem 0 0.35rem 1.5rem;
+    font-size: 0.84rem; color: var(--text-muted); line-height: 1.55;
+  }
+  .substep-list li::before {
+    content: ''; position: absolute; left: 0; top: 0.7rem;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim);
+  }
+  .substep-list li.loop-li::before { background: var(--loop); }
+  .substep-list li strong { color: var(--text); }
+
+  /* SOURCES */
+  .sources-section { padding: 2.5rem 0 3rem; }
+  .sources-title { font-family: 'Fraunces', serif; font-size: 1.2rem; margin-bottom: 1rem; }
+  .source-item {
+    display: flex; gap: 0.75rem; padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border); align-items: flex-start;
+    transition: background 0.3s; border-radius: 4px;
+    padding-left: 0.5rem; margin-left: -0.5rem;
+  }
+  .source-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    color: var(--loop); background: var(--loop-bg);
+    width: 24px; height: 24px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 0.1rem;
+  }
+  .source-text { font-size: 0.78rem; color: var(--text-muted); line-height: 1.55; }
+  .source-text a { color: var(--hybrid); text-decoration: none; }
+  .source-text a:hover { text-decoration: underline; }
+  .ref-link {
+    color: var(--loop); text-decoration: none;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; font-weight: 500;
+    background: var(--loop-bg); padding: 0.05rem 0.3rem; border-radius: 3px;
+    transition: background 0.15s, color 0.15s; cursor: pointer;
+  }
+  .ref-link:hover { background: var(--loop); color: var(--bg); }
+
+  /* KPI ROW */
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; margin-bottom: 1.5rem;
+  }
+  .kpi-cell {
+    background: var(--surface); padding: 1rem 1.25rem;
+    text-align: center;
+  }
+  .kpi-value {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem; font-weight: 500; color: var(--loop);
+    margin-bottom: 0.15rem;
+  }
+  .kpi-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--text-dim);
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .content-grid, .content-grid.triple { grid-template-columns: 1fr; }
+    .tools-grid { grid-template-columns: 1fr; }
+    .step-nav { flex-direction: column; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    header h1 { font-size: 1.8rem; }
+  }
+
+  /* ANIMATIONS */
+  .step-section { opacity: 0; transform: translateY(12px); animation: fadeIn 0.4s ease forwards; }
+  .step-section:nth-child(1) { animation-delay: 0.05s; }
+  .step-section:nth-child(2) { animation-delay: 0.15s; }
+  .step-section:nth-child(3) { animation-delay: 0.25s; }
+  .step-section:nth-child(4) { animation-delay: 0.35s; }
+  .step-section:nth-child(5) { animation-delay: 0.45s; }
+  @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="breadcrumb">Prozessanalyse · Deep Dive II · Gross- & Komplexschäden · Schweiz</div>
+    <h1>Iterative Schleifen in <span>04 – 05</span></h1>
+    <p class="subtitle">Wie gestalten sich Nachermittlung, Reserveanpassung und Teilzahlungen bei komplexen Haftpflicht- und Sachgrossschäden? Dieser Deep Dive beleuchtet die Feedback-Loops, die im Standardprozess nicht sichtbar sind — aber bei Grossschäden den überwiegenden Teil der Durchlaufzeit und der Kosten verursachen.</p>
+
+    <nav class="step-nav">
+      <div class="step-nav-item active" data-target="sec-kontext"><span class="step-nav-num">▸</span>Kontext & Schwellen</div>
+      <div class="step-nav-item" data-target="sec-loop-04"><span class="step-nav-num">04</span>Deckungsschleifen</div>
+      <div class="step-nav-item" data-target="sec-loop-05"><span class="step-nav-num">05</span>Triage-Schleifen</div>
+      <div class="step-nav-item" data-target="sec-reserve"><span class="step-nav-num">◎</span>Reservierung</div>
+      <div class="step-nav-item" data-target="sec-teilzahlung"><span class="step-nav-num">◎</span>Teilzahlungen</div>
+    </nav>
+  </header>
+
+  <!-- ===================== KONTEXT ===================== -->
+  <section class="step-section" id="sec-kontext">
+    <div class="step-header">
+      <div class="step-badge loop">▸</div>
+      <div class="step-header-text">
+        <h2>Kontext: Warum Schleifen entstehen</h2>
+        <span class="type-label loop">Grossschaden-Spezifik</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag">Abgrenzung: Was ist ein Grossschaden?</div>
+        <div class="cell-body">
+          Im Standardprozess (Deep Dive Schritte 02–05) werden Schritte 04 und 05 als <strong>weitgehend lineare Durchlaufschritte</strong> dargestellt. Bei Standardschäden trifft das zu: Die Deckungsprüfung läuft regelbasiert durch, die Triage weist den Fall einem Pfad zu, und der Prozess schreitet in die Regulierung fort.
+
+          <br><br>Bei <strong>Gross- und Komplexschäden</strong> ist diese Linearität die Ausnahme. Stattdessen entstehen iterative Schleifen zwischen den Prozessschritten – teilweise über Monate oder Jahre hinweg. Diese Schleifen werden durch drei Treiber ausgelöst:
+
+          <ul class="substep-list">
+            <li><strong>Informationsunsicherheit:</strong> Bei Grossschäden liegen zum Zeitpunkt der FNOL oft nur 10–30% der für die Entscheidung relevanten Informationen vor. Jede neue Information (Gutachten, Polizeirapport, Arztzeugnis, Zeugenbefragung) kann die Deckungsbeurteilung, die Kategorisierung und die Reserveeinschätzung grundlegend ändern.</li>
+            <li><strong>Mehrparteien-Dynamik:</strong> Komplexe Haftpflichtfälle involvieren oft mehrere Geschädigte, Mitverursacher, Regressbeteiligte (UVG/IV/AHV) und Rechtsvertreter. Jede Partei bringt neue Fakten oder Ansprüche ein, die Rückschleifen auslösen.</li>
+            <li class="loop-li"><strong>Regulatorische Anforderungen:</strong> FINMA und die Rechnungslegung (Swiss GAAP FER 11 / IFRS 17) verlangen quartalsweise Reserveüberprüfungen und Best-Estimate-Bewertungen. Bei Grossschäden (>CHF 100'000, je nach Versicherer auch >CHF 500'000 oder >CHF 1 Mio.) erzwingen diese externen Trigger periodische Review-Schleifen.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-cell">
+        <div class="kpi-value">>CHF 100K</div>
+        <div class="kpi-label">Typische Grossschaden-Schwelle Sach</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-value">>CHF 500K</div>
+        <div class="kpi-label">Schwelle Grossschaden-Team HP</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-value">3–15 Jahre</div>
+        <div class="kpi-label">Laufzeit komplexer Personenschäden</div>
+      </div>
+      <div class="kpi-cell">
+        <div class="kpi-value">8–25×</div>
+        <div class="kpi-label">Reserve-Revisionen pro Grossschaden</div>
+      </div>
+    </div>
+
+    <div class="callout callout-loop">
+      <div class="callout-title">Unterschied Sach vs. Haftpflicht Grossschaden</div>
+      <div class="callout-body">
+        <strong>Sach-Grossschäden</strong> (z.B. Brandschaden Gewerbegebäude >CHF 1 Mio.) haben typischerweise <strong>2–4 Hauptschleifen</strong>: Erstbewertung → Gutachterermittlung → Nachregulierung → Schlussabrechnung. Die Schadenursache und die Schadenhöhe sind meist innerhalb von 6–18 Monaten geklärt.
+        <br><br><strong>Haftpflicht-Grossschäden</strong> (insb. Personenschäden mit Erwerbsausfallrenten) können <strong>10–25+ Schleifen</strong> durchlaufen. Die Haftungsfrage, der Kausalzusammenhang, der Schadenumfang (Haushaltschaden, Genugtuung nach Art. 47 OR, Erwerbsausfall, Integritätsentschädigung) und die Regress-Koordination mit Sozialversicherungen (IV, UVG, BVG) werden parallel und iterativ bearbeitet. Die Abwicklungsdauer beträgt <strong>3–15 Jahre</strong>, in Extremfällen länger.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LOOP 04 ===================== -->
+  <section class="step-section" id="sec-loop-04">
+    <div class="step-header">
+      <div class="step-badge loop">04</div>
+      <div class="step-header-text">
+        <h2>Deckungsprüfung: Iterative Schleifen</h2>
+        <span class="type-label loop">Überwiegend manuell bei Grossschäden</span>
+      </div>
+    </div>
+
+    <div class="loop-flow">
+      <div class="loop-flow-title">Typischer Schleifenverlauf Deckungsprüfung Grossschaden</div>
+      <div class="flow-row">
+        <div class="flow-node step">Erst-Deckungsprüfung</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node decision">Deckung vorläufig?</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Reservebildung (Initial)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Regulierungsbeginn</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-node loop-back">⟲ Neues Gutachten / Rechtslage ändert</div>
+        <div class="flow-arrow loop-arrow">↺</div>
+        <div class="flow-node decision">Re-Assessment Deckung</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Reserveanpassung</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node output">Weiter / Eskalation</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-node loop-back">⟲ Regressanspruch / Subrogation</div>
+        <div class="flow-arrow loop-arrow">↺</div>
+        <div class="flow-node decision">Deckungsanteil neu</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Netto-Reserve anpassen</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag purple">Schleifen-Auslöser im Detail</div>
+        <div class="cell-body">
+          Bei Grossschäden wird die Deckungsprüfung <strong>nicht einmalig durchlaufen, sondern wiederholt geöffnet</strong>. Die häufigsten Auslöser für Rückschleifen:
+
+          <ul class="substep-list">
+            <li class="loop-li"><strong>Nachträgliche Haftungsklärung:</strong> Bei der Erstmeldung liegt die Haftungsfrage oft noch offen. Erst wenn Gutachten (Baugutachten, medizinisches Gutachten, technisches Gutachten), Polizeiberichte oder Zeugenaussagen eingehen, kann die Haftungsquote festgelegt werden. Jede Änderung der Haftungsquote beeinflusst direkt die Deckung. Beispiel: Ein Werkehaftungsfall (Art. 58 OR) erfordert ein Baugutachten, das erst Monate nach FNOL vorliegt.</li>
+            <li class="loop-li"><strong>Claims-Made-Trigger bei Berufshaftpflicht:</strong> Bei Architekten-, Ärzte- oder Revisions-Berufshaftpflicht muss geprüft werden, ob der Schadenfall noch unter die aktive oder eine abgelaufene Police fällt. Policenwechsel, Retroaktiv-Datum und Extended Reporting Period (ERP / «Tail Coverage») erfordern vertiefte manuelle Analyse – oft mit Rückfragen an die Underwriting-Abteilung.</li>
+            <li class="loop-li"><strong>Kumul- und Serien-Schadenklausel:</strong> Treten mehrere gleichartige Schäden auf (z.B. Produktrückruf, Baumangelserie), wird geprüft, ob sie als Einzelschäden oder als <strong>Serienschaden unter einer Aggregate-Limite</strong> zu behandeln sind. Die Klassifizierung kann die Deckungssumme fundamental beeinflussen und wird oft erst im Verlauf klar.</li>
+            <li class="loop-li"><strong>Regresseingänge:</strong> Wenn Sozialversicherungsträger (Suva/UVG, IV, Pensionskasse) ihre Leistungen beziffern und Regressansprüche geltend machen, ändert sich die Deckungssituation. Das Verjährungsabkommen SVV–BSV–Suva regelt die Fristen (3 Jahre relativ, 20 Jahre absolut, mit 10/15-Jahres-Verzichtsschwellen). <span class="ref-link" data-src="1">[1]</span></li>
+            <li class="loop-li"><strong>Deckungsstreit / Reservation of Rights:</strong> Der Versicherer spricht eine <strong>vorläufige Deckungszusage unter Vorbehalt</strong> aus und reguliert parallel, während die endgültige Deckung juristisch abgeklärt wird. Ergibt die Abklärung eine (teilweise) Deckungsablehnung, ändert sich der gesamte Dossier-Status rückwirkend.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Zuständigkeit bei Schleifen</div>
+        <div class="cell-body">
+          <strong>Erstprüfung:</strong> Senior Schadenregulierer/in (Grossschaden-Team)<br>
+          <strong>Re-Assessments:</strong> Fachspezialist/in Deckung + Rechtsabteilung (Vier-Augen-Prinzip)<br>
+          <strong>Eskalation:</strong> Head of Claims / Chief Claims Officer bei grundsätzlichen Deckungsfragen<br>
+          <strong>Regress-Koordination:</strong> Spezialist/in Regress oder dedizierte Regress-Abteilung (bei Grossversicherern wie Zurich, Mobiliar mit eigenen Regress-Teams)
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Automatisierung bei Grossschäden</div>
+        <div class="cell-body">
+          <strong>Automatisierungsgrad:</strong> 5–15% (fast vollständig manuell)<br>
+          <strong>System-Unterstützung:</strong> Deckungsprüflogik liefert Vorschlag, aber finale Entscheidung immer manuell<br>
+          <strong>Was automatisiert ist:</strong> Fristenüberwachung, automatische Wiedervorlage, Policendatenabgleich, Verjährungswarnungen<br>
+          <strong>Was manuell bleibt:</strong> Haftungsbeurteilung, AVB-Interpretation, Deckungsentscheid bei Grenzfällen
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Besonderheit Haftpflicht</div>
+      <div class="callout-body">
+        Bei Haftpflicht-Grossschäden existiert eine <strong>doppelte Schleife</strong>: Die äussere Schleife prüft die Deckung des VN (hat der Versicherte die Haftung ausgelöst?), die innere Schleife prüft die <strong>Anspruchsberechtigung des Geschädigten</strong> (Art. 41 ff. OR: Schaden, Widerrechtlichkeit, Kausalzusammenhang, Verschulden). Beide Schleifen können unabhängig voneinander neue Informationen generieren und Anpassungen erfordern. Bei <strong>Personenschäden mit IV-Verfahren</strong> ist die Deckungsprüfung zudem oft an den Ausgang des IV-Entscheids gebunden – was Jahre dauern kann.
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== LOOP 05 ===================== -->
+  <section class="step-section" id="sec-loop-05">
+    <div class="step-header">
+      <div class="step-badge loop">05</div>
+      <div class="step-header-text">
+        <h2>Triage & Schadensteuerung: Iterative Schleifen</h2>
+        <span class="type-label loop">Re-Triage bei Gross-/Komplexschäden</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag purple">Warum Re-Triage nötig wird</div>
+        <div class="cell-body">
+          Die initiale Triage kategorisiert den Fall <strong>auf Basis der Erstinformation</strong>. Bei Grossschäden zeigt sich der wahre Charakter des Falls oft erst im Verlauf – was eine <strong>Neuzuweisung des Bearbeitungspfads</strong> erfordert:
+
+          <ul class="substep-list">
+            <li class="loop-li"><strong>Schadenentwicklung übersteigt Schwellwert:</strong> Ein zunächst als «Standard» triagierter Sachschaden (z.B. geschätzt CHF 80'000) stellt sich nach Gutachten als Grossschaden (>CHF 500'000) heraus. → Re-Triage von Standard-Innendienst an Grossschaden-Team.</li>
+            <li class="loop-li"><strong>Neue Schadenkategorie:</strong> Ein als reiner Sachschaden gemeldeter Fall wird nach Eingang medizinischer Unterlagen zum Personenschaden mit Rentenfolge. → Vollständig anderer Bearbeitungspfad (Wechsel von Sach- zu Personenschaden-Spezialist/in, Einbezug Vertrauensarzt).</li>
+            <li class="loop-li"><strong>Fraud-Eskalation nachträglich:</strong> Im Verlauf der Regulierung tauchen neue Verdachtsmomente auf (z.B. widersprüchliche Zeugenaussagen, untypische Schadenbilder bei Nachgutachten). → Nachträgliche Übergabe an SIU (Special Investigation Unit).</li>
+            <li class="loop-li"><strong>Rückversicherungs-Trigger:</strong> Übersteigt die Schadenschätzung die Selbstbehalts-Schwelle des Rückversicherungsvertrags (Excess of Loss), wird der Rückversicherer involviert. Dies erfordert eine Re-Triage des Steuerungsprozesses: Der RV hat Mitspracherechte bei Regulierungsentscheidungen, was den Workflow fundamental ändert. <span class="ref-link" data-src="2">[2]</span></li>
+            <li class="loop-li"><strong>Koordination mit Parallelprozessen:</strong> Bei Betriebshaftpflicht laufen oft parallel: Strafverfahren, SUVA-Abklärung, IV-Verfahren, Arbeitsinspektorat. Statusänderungen in jedem Parallelverfahren können eine Re-Triage des Haftpflichtdossiers auslösen.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="loop-flow">
+      <div class="loop-flow-title">Re-Triage-Flow bei Grossschäden</div>
+      <div class="flow-row">
+        <div class="flow-node step">Initiale Triage</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Bearbeitungsbeginn Standard/Spezialist</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node decision">Neue Info ändert Profil?</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-label">Ja →</div>
+        <div class="flow-node loop-back">⟲ Re-Triage</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Neuzuweisung Team/Pfad</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Reserveanpassung</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node decision">RV-Schwelle erreicht?</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-label">Ja →</div>
+        <div class="flow-node loop-back">⟲ RV-Involvement</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">RV-Reporting & Co-Management</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node output">Regulierung mit RV-Oversight</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Häufigkeit Re-Triage</div>
+        <div class="cell-body">
+          <strong>Sach-Grossschäden:</strong> 1–3 Re-Triagen pro Fall (meist nach Gutachtenergebnis oder Kostenexplosion)<br>
+          <strong>HP-Komplex ohne Personenschaden:</strong> 2–5 Re-Triagen<br>
+          <strong>HP mit Personenschaden:</strong> 5–15+ Re-Triagen über die Gesamtlaufzeit (jeder IV-Zwischenentscheid, jede medizinische Neubewertung, jeder Regresseingang)<br>
+          <strong>Kumulereignis (z.B. Hagel 2024):</strong> Massen-Re-Triage von Hunderten Fällen bei Überschreitung der initialen Katastrophenreserve
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Systemische Auswirkung</div>
+        <div class="cell-body">
+          <strong>Workload-Shift:</strong> Re-Triagen verschieben Fälle aus dem Standardpool in Spezialistenteams, was Kapazitätsengpässe verursacht<br>
+          <strong>Reserveimpact:</strong> Jede Re-Triage triggert eine Reserveüberprüfung (→ siehe Abschnitt Reservierung)<br>
+          <strong>RV-Meldepflicht:</strong> Je nach Vertrag muss der Rückversicherer innerhalb von 48h–30 Tagen informiert werden<br>
+          <strong>Reporting:</strong> Grossschäden ab definierten Schwellen erscheinen im Verwaltungsrats- und FINMA-Reporting
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESERVIERUNG ===================== -->
+  <section class="step-section" id="sec-reserve">
+    <div class="step-header">
+      <div class="step-badge loop">◎</div>
+      <div class="step-header-text">
+        <h2>Reservierung: Das zentrale Steuerungselement</h2>
+        <span class="type-label loop">Querschnittsprozess · iterativ</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag purple">Reservearten bei Grossschäden</div>
+        <div class="cell-body">
+          Die Reserve ist bei Grossschäden das <strong>finanzielle Rückgrat des gesamten Dossiers</strong>. Im Gegensatz zu Standardschäden, wo eine einmalige Reservebildung bei Dossiereröffnung genügt, wird die Reserve bei Grossschäden <strong>laufend angepasst</strong> — oft 8–25 Mal über die Laufzeit eines komplexen Falls.
+
+          <ul class="substep-list">
+            <li><strong>Case Reserve (Einzelfall-Reserve):</strong> Individuelle Schätzung des erwarteten Gesamtschadens pro Dossier, manuell durch Senior-Regulierer/in festgelegt. Bei Grossschäden immer als «Best Estimate» gemäss FINMA-Anforderungen.</li>
+            <li><strong>IBNR (Incurred But Not Reported):</strong> Pauschale Reserve für Spätschäden, die noch nicht gemeldet sind. Besonders relevant bei Haftpflicht mit langen Meldeverzögerungen (Berufshaftpflicht, Produkthaftpflicht). Aktuariell berechnet über Chain-Ladder- oder Bornhuetter-Ferguson-Methoden. <span class="ref-link" data-src="3">[3]</span></li>
+            <li><strong>IBNER (Incurred But Not Enough Reserved):</strong> Zusatzreserve für bekannte Dossiers, deren Case Reserve voraussichtlich nicht ausreicht. Bei Grossschäden mit Personenschaden ist IBNER besonders signifikant, da die Erstbewertung die Langzeitfolgen systematisch unterschätzt.</li>
+            <li><strong>LAE Reserve (Loss Adjustment Expenses):</strong> Reservierung der internen und externen Regulierungskosten (ALAE: Anwaltskosten, Gutachterkosten, Übersetzerkosten; ULAE: anteiliger Innendienst). Bei komplexen HP-Grossschäden können LAE 10–25% der Schadenreserve betragen.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag purple">Reserveänderungs-Prozess</div>
+        <div class="cell-body">
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-marker initial">T₀</div>
+              <div class="timeline-content">
+                <h4>Initiale Reservebildung (bei Triage/Dossiereröffnung)</h4>
+                <p>Erste Schätzung auf Basis der FNOL-Daten. Bei Grossschäden meist konservativ hoch angesetzt (besser zu hoch als zu niedrig, da Reserveerhöhungen negativ auf die Bilanz wirken). Senior-Regulierer/in setzt Reserve, Teamleitung genehmigt ab definierter Schwelle (typisch: >CHF 250'000 Genehmigung TL, >CHF 1 Mio. Head Claims, >CHF 5 Mio. GF/CRO).</p>
+                <div class="timeline-meta">Trigger: Dossiereröffnung · Automatisierung: 10–20%</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker loop-m">T₁</div>
+              <div class="timeline-content">
+                <h4>Erste Anpassung (nach Erstermittlung, Wochen 2–8)</h4>
+                <p>Ergebnisse der Erstermittlung liegen vor: Polizeirapport, erste Gutachtereinschätzung, medizinischer Erstbericht. Reserve wird nach oben oder unten korrigiert. Bei HP: Haftungsquote erstmalig geschätzt, Aufteilung VN-Anteil / Geschädigten-Ansprüche / Regress.</p>
+                <div class="timeline-meta">Trigger: Ermittlungsergebnis · Automatisierung: 5–10%</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker loop-m">Tₙ</div>
+              <div class="timeline-content">
+                <h4>Periodische Reviews (quartalsweise oder ereignisgetrieben)</h4>
+                <p><strong>Quartalsreview:</strong> Jeder Grossschaden wird mindestens quartalsweise überprüft (FINMA/Swiss GAAP FER 11). Claims Controller oder Aktuariat challengt die Case Reserve. <span class="ref-link" data-src="4">[4]</span><br>
+                <strong>Ereignisgetriebene Reviews:</strong> Neues Gutachten, Gerichtsurteil, IV-Entscheid, Vergleichsverhandlung — jedes dieser Events löst eine sofortige Reserveprüfung aus. Bei Personenschäden: medizinische Neubewertung (z.B. Verschlechterung der Prognose, neue Diagnose).<br>
+                <strong>Large Loss Committee:</strong> Viele Schweizer Versicherer (u.a. Zurich, Helvetia, AXA) haben ein «Large Loss Committee» oder «Grossschaden-Gremium», das sich monatlich oder quartalsweise zu den grössten offenen Dossiers trifft und die Reserveadäquanz prüft.</p>
+                <div class="timeline-meta">Trigger: Quartal, Gutachten, Urteil, IV-Entscheid · Automatisierung: 0–5%</div>
+              </div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-marker final">T∞</div>
+              <div class="timeline-content">
+                <h4>Schlussreserve & Auflösung</h4>
+                <p>Bei Abschluss des Dossiers (Vergleich, Urteil, Schlusszahlung) wird die verbleibende Reserve aufgelöst. Differenz (Über-/Unter-Reservierung) fliesst als Run-Off-Ergebnis in die GuV. Bei strukturierten Vergleichen (Rentenzahlung statt Einmalzahlung): Reserve bleibt als Rentenbarwert bestehen und wird jährlich aktuariell überprüft.</p>
+                <div class="timeline-meta">Trigger: Vergleich, Urteil, Schlusszahlung · Automatisierung: 20–30%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-loop">
+      <div class="callout-title">Spezialfall: Rentenreserven bei Personenschäden</div>
+      <div class="callout-body">
+        Wenn ein Haftpflicht-Grossschaden zu einer Erwerbsausfallrente oder einem Haushaltschaden-Abgeltung führt, wird eine <strong>Rentenreserve als Barwert</strong> gebildet. Diese hängt von Alter des Geschädigten, Lebenserwartung, Invaliditätsgrad und Diskontierungssatz ab. Die Rentenreserve kann <strong>den grössten Einzelposten im Claims-Portfolio</strong> eines Versicherers darstellen und wird jährlich aktuariell überprüft. Ändert sich die Lebenserwartung (z.B. durch neue medizinische Erkenntnisse) oder der Diskontierungssatz (z.B. Zinswende), werden <strong>sämtliche Rentenreserven des Portfolios gleichzeitig angepasst</strong> — ein Batch-Prozess mit potenziellem Impact von mehreren Dutzend Millionen Franken.
+      </div>
+    </div>
+
+    <div class="content-grid single">
+      <div class="grid-cell">
+        <div class="cell-tag">Relevante Tools & Systeme für Grossschaden-Reservierung</div>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-name">Guidewire ClaimCenter – Financials Module</div>
+            <div class="tool-vendor">Guidewire Software</div>
+            <div class="tool-desc">Reserve-Management mit mehrstufigem Genehmigungsworkflow (Authority Limits pro Rolle). Automatische Reservehistorie, Audit Trail jeder Anpassung. Unterstützt Multi-Currency und Multi-Claimant-Reservierung. Integration mit Financials/Billing. <span class="ref-link" data-src="5">[5]</span></div>
+            <span class="tool-tag core">Kernsystem</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Aktuarielle Reservetools</div>
+            <div class="tool-vendor">ResQ (Addactis), Emblem (Willis Towers Watson), R/Python</div>
+            <div class="tool-desc">Chain-Ladder, Bornhuetter-Ferguson, Cape Cod und weitere aktuarielle Methoden für IBNR/IBNER-Berechnung. Grössere Schweizer Versicherer nutzen dedizierte Reservesoftware oder eigene R/Python-Modelle. Quartalsweise Berechnung, integriert mit Claims-Daten. <span class="ref-link" data-src="3">[3]</span></div>
+            <span class="tool-tag loop-tag">Aktuariat</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Leonardo® Schadenberechnungsprogramm</div>
+            <div class="tool-vendor">Fachverlag Schneider (CH)</div>
+            <div class="tool-desc">Standard-Software für die Berechnung von Personenschäden in der Schweiz. Berechnet Erwerbsausfall, Haushaltschaden, Genugtuung, Versorgungsschaden, Rentenbarwerte. De-facto-Standard bei Schweizer Haftpflichtversicherern und spezialisierten Anwaltskanzleien. <span class="ref-link" data-src="6">[6]</span></div>
+            <span class="tool-tag niche">Personenschaden CH</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Large Loss Reporting / Bordereaux</div>
+            <div class="tool-vendor">Rückversicherungs-Schnittstellen (Swiss Re, Munich Re, PartnerRe etc.)</div>
+            <div class="tool-desc">Automatisierte Grossschaden-Meldungen an den Rückversicherer bei Überschreitung der XL-Schwelle. Quarterly Bordereaux mit Reserveentwicklung pro Dossier. Zunehmend über API/ACORD-Standard, bei vielen CH-Versicherern noch Excel-basiert. <span class="ref-link" data-src="2">[2]</span></div>
+            <span class="tool-tag addon">Rückversicherung</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TEILZAHLUNGEN ===================== -->
+  <section class="step-section" id="sec-teilzahlung">
+    <div class="step-header">
+      <div class="step-badge loop">◎</div>
+      <div class="step-header-text">
+        <h2>Teilzahlungen & Akontozahlungen</h2>
+        <span class="type-label loop">Querschnittsprozess · parallele Regulierung</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag purple">Warum Teilzahlungen bei Grossschäden zwingend sind</div>
+        <div class="cell-body">
+          Bei Standardschäden erfolgt eine <strong>einmalige Schlusszahlung</strong>. Bei Gross- und Komplexschäden dauert die vollständige Regulierung Monate bis Jahre. Um den Geschädigten nicht unverhältnismässig zu belasten und die Verhandlungsposition zu wahren, leisten Versicherer <strong>Akonto- und Teilzahlungen</strong> parallel zur laufenden Ermittlung.
+
+          <ul class="substep-list">
+            <li><strong>Akontozahlung (Vorschusszahlung):</strong> Zahlung eines unbestrittenen Teilbetrags an den Geschädigten, bevor die Gesamtschadenhöhe feststeht. Bei Haftpflicht: Typisch bei anerkannter Grundhaftung, aber noch offener Schadenhöhe. Beispiel: Bei einem Betriebshaftpflicht-Personenschaden werden Heilungskosten laufend vergütet, während der Erwerbsausfall noch strittig ist.</li>
+            <li><strong>Teilregulierung (Partial Settlement):</strong> Einzelne Schadenpositionen werden definitiv abgerechnet, während andere offen bleiben. Beispiel: Sachschaden CHF 200'000 wird reguliert, Betriebsunterbrechungsschaden CHF 800'000 bleibt offen.</li>
+            <li><strong>Laufende Zahlungen:</strong> Bei Personenschäden: monatliche oder quartalsweise Zahlungen für Erwerbsausfall, Pflegekosten, Haushaltschaden. Ähnlich einer Rente, aber noch ohne rechtskräftigen Abschluss.</li>
+            <li><strong>Subrogations-/Regresszahlungen:</strong> Zahlungen an Sozialversicherungsträger (Suva, IV), die bereits Vorleistungen erbracht haben. Erfolgen oft zeitversetzt zum Hauptschadenprozess und erfordern separate Reservierung.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="loop-flow">
+      <div class="loop-flow-title">Teilzahlungs-Zyklus bei Haftpflicht-Grossschaden</div>
+      <div class="flow-row">
+        <div class="flow-node step">Haftung anerkannt (Grundsatz)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">1. Akonto Heilkosten</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node decision">Neue Rechnung?</div>
+        <div class="flow-arrow loop-arrow">↺</div>
+        <div class="flow-node loop-back">Weitere Akonto</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-node step">Gutachten liegt vor</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Teilregulierung Sachschaden</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Reserve anpassen (Paid ↑, Outstanding ↓)</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-node step">IV-Entscheid liegt vor</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Erwerbsausfall berechnen</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node step">Regress-Koordination</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node output">Schlussabrechnung</div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Buchhalterische Auswirkung</div>
+        <div class="cell-body">
+          Jede Teilzahlung verschiebt den <strong>Incurred-Breakdown</strong> des Dossiers: <strong>Paid (bezahlt)</strong> steigt, <strong>Outstanding (offen)</strong> sinkt um denselben Betrag — <strong>sofern die Gesamtreserve unverändert bleibt</strong>. In der Praxis ändert sich bei Grossschäden die Gesamtreserve fast immer parallel, so dass Paid steigt UND Outstanding ebenfalls steigt (Nachreservierung). Die Incurred-Betrachtung (Paid + Outstanding) ist die massgebliche Kennzahl für FINMA-Reporting und Rückversicherung.
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Genehmigungsprozess</div>
+        <div class="cell-body">
+          <strong>Authority Limits (typisch CH):</strong><br>
+          Sachbearbeiter/in: bis CHF 25'000 pro Zahlung<br>
+          Senior-Regulierer/in: bis CHF 100'000<br>
+          Teamleiter/in Grossschäden: bis CHF 500'000<br>
+          Head of Claims: bis CHF 2 Mio.<br>
+          CCO / Geschäftsleitung: >CHF 2 Mio.<br>
+          <strong>Vier-Augen-Prinzip</strong> ab definierter Schwelle zwingend. Akontozahlungen an Geschädigte erfordern zusätzlich <strong>Saldoerklärung</strong> (Bestätigung, dass die Zahlung auf die Gesamtforderung angerechnet wird).
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Besonderheit Haftpflicht: Strukturierte Regulierung</div>
+      <div class="callout-body">
+        Bei schweren Personenschäden wird oft eine <strong>strukturierte Regulierung</strong> vereinbart: Statt einer hohen Einmalzahlung erhält der Geschädigte eine Kombination aus Einmalzahlung (für Genugtuung und abgeschlossene Positionen) und <strong>periodischen Zahlungen</strong> (für laufenden Erwerbsausfall, Pflege). Dieses Modell erfordert eine <strong>Rentenbarwert-Reservierung</strong> im Claims-System, die sich von der klassischen Einzelfall-Reserve fundamental unterscheidet — es entsteht ein langfristiges Passivum, das aktuariell bewirtschaftet werden muss (Diskontierungssatz, Sterbetafeln, Invaliditätsentwicklung).
+      </div>
+    </div>
+
+    <div class="content-grid single">
+      <div class="grid-cell">
+        <div class="cell-tag">Tools & Systeme für Teilzahlungsmanagement</div>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-name">Guidewire ClaimCenter – Payment Module</div>
+            <div class="tool-vendor">Guidewire Software</div>
+            <div class="tool-desc">Mehrstufiger Zahlungsworkflow mit Authority-Limit-Prüfung, automatischer Vier-Augen-Routing, Reserveabgleich bei Zahlungsfreigabe. Unterstützt Akonto-, Teil- und Schlusszahlungen. Integration mit SAP FI/CO oder vergleichbaren Finanzsystemen für die Auszahlung. <span class="ref-link" data-src="5">[5]</span></div>
+            <span class="tool-tag core">Kernsystem</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">SAP FI / Abacus / Finanzsysteme</div>
+            <div class="tool-vendor">ERP-Anbieter</div>
+            <div class="tool-desc">Die eigentliche Geldüberweisung (SEPA/SIC) erfolgt über das Finanz-ERP. Schnittstelle Claims→ERP ist kritisch: Zahlungsdaten (Empfänger, IBAN, Betrag, Referenz) werden automatisch übergeben. Bei CH-Versicherern mit Guidewire: direkte Integration ClaimCenter→SAP. Bei Eigenentwicklungen: oft Batch-Schnittstellen.</div>
+            <span class="tool-tag addon">Zahlungsverkehr</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Regress-Management-Modul</div>
+            <div class="tool-vendor">Teil des Claims-Systems oder Eigenentwicklung</div>
+            <div class="tool-desc">Verwaltung von Regressforderungen und -zahlungen an Sozialversicherungsträger (Suva, IV, AHV, Pensionskassen). Fristenüberwachung gemäss Verjährungsabkommen SVV–BSV–Suva. Bei Grossversicherern als eigenes Modul oder Subsystem, bei kleineren oft in Excel/Access. <span class="ref-link" data-src="1">[1]</span></div>
+            <span class="tool-tag loop-tag">Regress</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Leonardo® + Rentenbarwert-Rechner</div>
+            <div class="tool-vendor">Fachverlag Schneider (CH) + versichererspezifisch</div>
+            <div class="tool-desc">Berechnung der periodischen Zahlungsströme und deren Barwert für die Reservierung. Leonardo für Gesamtschadenberechnung bei Personenschäden. Interne Rentenrechner für die aktuarielle Barwertbestimmung (Diskontierung, Sterbetafeln BFS). <span class="ref-link" data-src="6">[6]</span></div>
+            <span class="tool-tag niche">Personenschaden CH</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== QUELLEN ===================== -->
+  <section class="sources-section">
+    <h2 class="sources-title">Quellen</h2>
+
+    <div class="source-item" id="src-1">
+      <div class="source-num">1</div>
+      <div class="source-text">Soziale Sicherheit CHSS – «Haftpflicht: Verjährungsabkommen schafft Klarheit.» Abkommen BSV–Suva–SVV zu Regressfristen bei Personenschäden (3-jährige relative / 20-jährige absolute Frist, 10/15-Jahres-Verzichtsschwellen). <a target="_blank" rel="noopener" href="https://sozialesicherheit.ch/de/haftpflicht-verjaehrungsabkommen-schafft-klarheit/">sozialesicherheit.ch</a></div>
+    </div>
+    <div class="source-item" id="src-2">
+      <div class="source-num">2</div>
+      <div class="source-text">Swiss Re – Rückversicherungspraxis: Grossschaden-Meldepflicht, Excess-of-Loss-Verträge, Bordereaux-Reporting und Co-Management-Rechte des Rückversicherers bei Grossschäden. Branchenpraxis CH/EMEA. <a target="_blank" rel="noopener" href="https://www.swissre.com/">swissre.com</a></div>
+    </div>
+    <div class="source-item" id="src-3">
+      <div class="source-num">3</div>
+      <div class="source-text">Wüthrich/Merz – «Loss Data Analytics», Kap. 11: Loss Reserving. Chain-Ladder, Bornhuetter-Ferguson, IBNR/IBNER-Methoden, Run-Off-Dreiecke. Standardwerk, u.a. ZHAW/ETH. <a target="_blank" rel="noopener" href="https://openacttexts.github.io/Loss-Data-Analytics/ChapLossReserves.html">openacttexts.github.io</a></div>
+    </div>
+    <div class="source-item" id="src-4">
+      <div class="source-num">4</div>
+      <div class="source-text">FINMA – Aufsichtsanforderungen an versicherungstechnische Rückstellungen. Quartalsweise Best-Estimate-Bewertung, Swiss GAAP FER 11, SST (Schweizer Solvenztest). <a target="_blank" rel="noopener" href="https://www.finma.ch/">finma.ch</a></div>
+    </div>
+    <div class="source-item" id="src-5">
+      <div class="source-num">5</div>
+      <div class="source-text">Guidewire – ClaimCenter Claims Management Software. Financials Module, Payment Workflow, Authority Limits, Multi-Claimant Reservierung. <a target="_blank" rel="noopener" href="https://www.guidewire.com/products/core-products/insurancesuite/claimcenter-claims-management-software">guidewire.com</a></div>
+    </div>
+    <div class="source-item" id="src-6">
+      <div class="source-num">6</div>
+      <div class="source-text">S-E-K Advokaten – Schadenberechnungsprogramm Leonardo® für Personenschäden. De-facto-Standard bei Schweizer Haftpflichtversicherern und spezialisierten Anwaltskanzleien. Berechnung Erwerbsausfall, Haushaltschaden, Genugtuung. <a target="_blank" rel="noopener" href="https://www.s-e-k.ch/kompetenzseiten/haftpflicht-und-versicherungsrecht/">s-e-k.ch</a></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  document.querySelectorAll('.step-nav-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      var targetId = this.getAttribute('data-target');
+      var target = document.getElementById(targetId);
+      if (target) {
+        document.querySelectorAll('.step-nav-item').forEach(function(n) { n.classList.remove('active'); });
+        this.classList.add('active');
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  document.querySelectorAll('.ref-link').forEach(function(ref) {
+    ref.addEventListener('click', function() {
+      var srcId = 'src-' + this.getAttribute('data-src');
+      var target = document.getElementById(srcId);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.style.background = 'rgba(192,132,252,0.25)';
+        target.style.borderRadius = '4px';
+        setTimeout(function() {
+          target.style.transition = 'background 1.5s ease';
+          target.style.background = 'transparent';
+        }, 200);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

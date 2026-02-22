@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Model Canvas · Claimflow AI AG</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAFAF8;
+    --card: #FFFFFF;
+    --card-hover: #FFFEF5;
+    --border: #E0DDD5;
+    --border-strong: #C8C4BA;
+    --text: #1A1A18;
+    --text-muted: #5C5A52;
+    --text-dim: #8A877D;
+    --accent: #7C3AED;
+    --accent-soft: rgba(124,58,237,0.08);
+    --accent-border: rgba(124,58,237,0.2);
+    --tag-blue: #2563EB;
+    --tag-blue-bg: rgba(37,99,235,0.07);
+    --tag-green: #059669;
+    --tag-green-bg: rgba(5,150,105,0.07);
+    --tag-amber: #D97706;
+    --tag-amber-bg: rgba(217,119,6,0.07);
+    --tag-rose: #E11D48;
+    --tag-rose-bg: rgba(225,29,72,0.07);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* PAGE HEADER */
+  .page-header {
+    padding: 2.5rem 3rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid var(--text);
+    margin: 0 1.5rem;
+  }
+  .page-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .page-header h1 span {
+    color: var(--accent);
+  }
+  .meta-row {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+  }
+  .meta-row strong { color: var(--text-muted); font-weight: 600; }
+
+  /* CANVAS GRID */
+  .canvas {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 2fr 1fr 1fr 2fr;
+    grid-template-rows: 1fr 1fr 0.75fr;
+    gap: 0;
+    margin: 1.5rem;
+    border: 2px solid var(--text);
+    border-radius: 2px;
+    min-height: 80vh;
+    background: var(--card);
+  }
+
+  .cell {
+    border: 1px solid var(--border);
+    padding: 1rem 1.1rem;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.2s;
+  }
+  .cell:hover {
+    background: var(--card-hover);
+  }
+
+  .cell-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--text-dim);
+    margin-bottom: 0.6rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .cell-label .cell-icon {
+    font-size: 0.85rem;
+    opacity: 0.4;
+  }
+
+  .cell-content {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .item {
+    padding: 0.3rem 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .item:last-child { border-bottom: none; }
+  .item-title {
+    font-weight: 700;
+    font-size: 0.73rem;
+    color: var(--text);
+    margin-bottom: 0.1rem;
+  }
+  .item-desc {
+    font-size: 0.67rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    font-size: 0.55rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+    margin-top: 0.2rem;
+  }
+  .tag-blue { background: var(--tag-blue-bg); color: var(--tag-blue); }
+  .tag-green { background: var(--tag-green-bg); color: var(--tag-green); }
+  .tag-amber { background: var(--tag-amber-bg); color: var(--tag-amber); }
+  .tag-rose { background: var(--tag-rose-bg); color: var(--tag-rose); }
+  .tag-purple { background: var(--accent-soft); color: var(--accent); }
+
+  /* GRID PLACEMENT */
+  .c-partners    { grid-column: 1; grid-row: 1 / 3; }
+  .c-activities  { grid-column: 2 / 4; grid-row: 1; }
+  .c-resources   { grid-column: 2 / 4; grid-row: 2; }
+  .c-value       { grid-column: 4; grid-row: 1 / 3; border-left: 2px solid var(--accent-border); border-right: 2px solid var(--accent-border); background: var(--accent-soft); }
+  .c-value:hover { background: rgba(124,58,237,0.06); }
+  .c-relations   { grid-column: 5 / 7; grid-row: 1; }
+  .c-channels    { grid-column: 5 / 7; grid-row: 2; }
+  .c-segments    { grid-column: 7; grid-row: 1 / 3; }
+  .c-cost        { grid-column: 1 / 5; grid-row: 3; }
+  .c-revenue     { grid-column: 5 / 8; grid-row: 3; }
+
+  /* COST/REVENUE SEPARATOR */
+  .c-cost { border-right: 2px solid var(--border-strong); }
+
+  /* FOOTER */
+  .page-footer {
+    margin: 0 1.5rem;
+    padding: 1rem 3rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* NUMBER HIGHLIGHT */
+  .num {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.1rem;
+  }
+  .num-label {
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .num-row {
+    display: flex;
+    gap: 1.2rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+  }
+  .num-block { flex: 1; }
+
+  /* ASSUMPTION BOX */
+  .assumption {
+    margin-top: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--tag-amber-bg);
+    border-radius: 4px;
+    border-left: 2px solid var(--tag-amber);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+  .assumption strong { color: var(--tag-amber); font-weight: 600; }
+
+  /* RESPONSIVE */
+  @media (max-width: 1100px) {
+    .canvas {
+      display: flex;
+      flex-direction: column;
+      min-height: auto;
+    }
+    .cell { border: 1px solid var(--border); }
+  }
+
+  @media print {
+    body { font-size: 9pt; }
+    .canvas { min-height: auto; page-break-inside: avoid; }
+    .cell:hover { background: var(--card); }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Business Model Canvas · <span>Claimflow AI AG</span></h1>
+  <div class="meta-row">
+    <span><strong>Designed for:</strong> Claimflow AI AG</span>
+    <span><strong>Date:</strong> Februar 2026</span>
+    <span><strong>Version:</strong> 1.0</span>
+    <span><strong>Basis:</strong> Deep Dive Claims Processing CH</span>
+  </div>
+</div>
+
+<div class="canvas">
+
+  <!-- KEY PARTNERSHIPS -->
+  <div class="cell c-partners">
+    <div class="cell-label"><span class="cell-icon">🤝</span> Key Partnerships</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">Guidewire / Adcubum Ökosystem</div>
+        <div class="item-desc">Technologiepartnerschaft für zertifizierte Integrationen. Guidewire Marketplace-Listing und Adcubum-Schnittstelle sind Voraussetzung für Marktzugang bei >80% der CH-Versicherer.</div>
+        <span class="tag tag-purple">KRITISCH</span>
+      </div>
+      <div class="item">
+        <div class="item-title">Systemintegratoren CH</div>
+        <div class="item-desc">EY (Guidewire-Lead bei Zurich), Synpulse, Deloitte, adesso – verfügen über bestehende Kundenbeziehungen und Claims-Transformationsprojekte, in denen Claimflow mitpositioniert werden kann.</div>
+        <span class="tag tag-blue">CHANNEL</span>
+      </div>
+      <div class="item">
+        <div class="item-title">Cloud / LLM Provider</div>
+        <div class="item-desc">Azure/AWS Switzerland Region oder Swisscom Cloud für regulatorische Compliance (FINMA-Datenlokalität). Anthropic/OpenAI API oder Open-Source-LLM (Mistral, Llama) für Foundation Model.</div>
+        <span class="tag tag-green">INFRA</span>
+      </div>
+      <div class="item">
+        <div class="item-title">ZHAW</div>
+        <div class="item-desc">Akademische Validierung der Accuracy-Claims. Gemeinsame Publikation am Fokus Claims Management für Glaubwürdigkeit.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY ACTIVITIES -->
+  <div class="cell c-activities">
+    <div class="cell-label"><span class="cell-icon">⚡</span> Key Activities</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">LLM Fine-Tuning auf CH-Schadendaten</div>
+        <div class="item-desc">Domänenspezifisches Training auf deutschsprachigen Schadenmeldungen, AVB-Texten, Polizeirapporten, Arztberichten. Entscheidender Moat.</div>
+        <span class="tag tag-purple">DIFFERENZIERUNG</span>
+      </div>
+      <div class="item">
+        <div class="item-title">Integration & Onboarding</div>
+        <div class="item-desc">Anbindung an Claims-Kernsysteme (API/Middleware). Konfiguration versichererspezifischer Triage-Regeln und Bearbeitungspfade.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Accuracy-Monitoring & Modellpflege</div>
+        <div class="item-desc">Laufende Messung der Triage-Accuracy vs. menschliche Entscheide. Drift Detection. Retraining-Zyklen.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">POC / Pilotprojekte</div>
+        <div class="item-desc">Jeder Neukunde erfordert 3–6-monatigen POC mit historischen Daten, bevor Produktiventscheid fällt.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KEY RESOURCES -->
+  <div class="cell c-resources">
+    <div class="cell-label"><span class="cell-icon">🏗️</span> Key Resources</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">Trainierte LLM-Modelle</div>
+        <div class="item-desc">Fine-tuned auf CH-Versicherungsdeutsch, Haftpflicht-Terminologie, Schadenklassifizierung. IP-geschützt.</div>
+        <span class="tag tag-purple">KERN-IP</span>
+      </div>
+      <div class="item">
+        <div class="item-title">ML-Engineering-Team</div>
+        <div class="item-desc">3–5 ML Engineers + 1–2 Versicherungs-Domänenexperten. Schweiz-basiert (Talent + Kundennähe).</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Integrations-Framework</div>
+        <div class="item-desc">Pre-built Konnektoren für Guidewire ClaimCenter, Adcubum Syrius, REST-APIs. Reduziert Onboarding-Zeit.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Benchmark-Daten / Referenzkunden</div>
+        <div class="item-desc">Nachgewiesene 95% Accuracy bei mind. 1 Referenzkunden mit publizierbarem Case Study. Ohne Referenz kein Enterprise-Verkauf.</div>
+        <span class="tag tag-rose">BLOCKER</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VALUE PROPOSITIONS -->
+  <div class="cell c-value">
+    <div class="cell-label"><span class="cell-icon">🎯</span> Value Propositions</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">95% Triage-Accuracy bei komplexen HP- und Sachfällen</div>
+        <div class="item-desc">5–7 Prozentpunkte besser als die bestehenden internen Lösungen der Zielkunden (die heute bei 82–90% liegen).</div>
+        <span class="tag tag-purple">KERN-KPI</span>
+      </div>
+
+      <div class="num-row">
+        <div class="num-block">
+          <span class="num">350–1'050</span>
+          <span class="num-label">Eingesparte Arbeitstage / Jahr</span>
+        </div>
+        <div class="num-block">
+          <span class="num">70</span>
+          <span class="num-label">Vermiedene Fehl-Triagen / 1'000 Fälle</span>
+        </div>
+      </div>
+
+      <div class="item">
+        <div class="item-title">Reduktion der Verarbeitungskosten</div>
+        <div class="item-desc">Weniger Fehl-Triagen = weniger Re-Triagen = weniger verschwendete Bearbeitungszeit durch falsch zugeordnete Spezialisten.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Schnellere Durchlaufzeiten</div>
+        <div class="item-desc">Fälle gelangen schneller in den richtigen Bearbeitungspfad. Liegenbleiber in der Grauzone (10–20% der Fälle) werden sofort erkannt und zugewiesen.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Frühzeitige Vollständigkeitserkennung</div>
+        <div class="item-desc">LLM analysiert unstrukturierte Meldungen und erkennt implizit fehlende Informationen. Upstream-Effekt: 2–10 Arbeitstage schnellere Nachforderung.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Kein Ersatz, sondern Ergänzung</div>
+        <div class="item-desc">Bestehende Prozesse und Systeme bleiben bestehen. Claimflow integriert sich als Entscheidungs-Layer — kein Rip-and-Replace-Risiko für den Kunden.</div>
+        <span class="tag tag-green">LOW RISK</span>
+      </div>
+
+      <div class="assumption">
+        <strong>Annahme:</strong> LLM-basierter Ansatz differenziert sich gegenüber bestehenden XGBoost/Rules-Engine-Lösungen primär durch Freitext-Verständnis (Arztberichte, Polizeirapporte, Korrespondenz), nicht durch bessere Verarbeitung strukturierter Daten.
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER RELATIONSHIPS -->
+  <div class="cell c-relations">
+    <div class="cell-label"><span class="cell-icon">💬</span> Customer Relationships</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">POC-to-Production Begleitung</div>
+        <div class="item-desc">3–6 Monate POC mit historischen Daten → Accuracy-Nachweis → Produktiventscheid. Intensive Betreuung während POC entscheidend.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Dedicated Customer Success</div>
+        <div class="item-desc">1 Customer Success Manager pro Versicherer. Quartalsweise Business Reviews mit Head of Claims. Accuracy-Reporting.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Co-Development der Triage-Regeln</div>
+        <div class="item-desc">Versichererspezifische Bearbeitungspfade und Schwellwerte werden gemeinsam konfiguriert. Kein One-Size-Fits-All.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Langfristige Partnerschaft</div>
+        <div class="item-desc">Modell wird mit den Daten des Kunden besser → Lock-in durch steigende Accuracy über Zeit. Vertragslaufzeiten 3+ Jahre.</div>
+        <span class="tag tag-green">RETENTION</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANNELS -->
+  <div class="cell c-channels">
+    <div class="cell-label"><span class="cell-icon">📡</span> Channels</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">Direct Sales (Enterprise)</div>
+        <div class="item-desc">Direktvertrieb an Head of Claims, CTO, CDO der Zielversicherer. Entscheidungszyklus: 6–18 Monate. C-Level-Sponsoring nötig.</div>
+        <span class="tag tag-purple">PRIMÄR</span>
+      </div>
+      <div class="item">
+        <div class="item-title">Systemintegratoren als Multiplikatoren</div>
+        <div class="item-desc">Synpulse, EY, Deloitte positionieren Claimflow als Baustein in Claims-Transformation-Projekten. Revenue Share oder Referral Fee.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Branchenevents & Thought Leadership</div>
+        <div class="item-desc">ZHAW Fokus Claims Management, SVV-Tagungen, InsurTech-Konferenzen (F10, InsurHack). POC-Ergebnisse als Case Study publizieren.</div>
+      </div>
+      <div class="item">
+        <div class="item-title">Guidewire / Adcubum Marketplace</div>
+        <div class="item-desc">Listing als zertifizierte Integration auf dem Guidewire Marketplace für Inbound-Lead-Generation.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CUSTOMER SEGMENTS -->
+  <div class="cell c-segments">
+    <div class="cell-label"><span class="cell-icon">👥</span> Customer Segments</div>
+    <div class="cell-content">
+      <div class="item">
+        <div class="item-title">Primär: Mittelgrosse CH-Versicherer</div>
+        <div class="item-desc">Baloise, Helvetia, Vaudoise, Generali Schweiz, Basler — gross genug für relevantes Fallvolumen (>5'000 HP-/Sach-Fälle p.a.), aber ohne dediziertes internes Data-Science-Team für Claims AI. Triage-Accuracy heute <90%.</div>
+        <span class="tag tag-purple">SWEET SPOT</span>
+      </div>
+      <div class="item">
+        <div class="item-title">Sekundär: Spezialversicherer</div>
+        <div class="item-desc">Berufshaftpflicht-Spezialisten (Ärzte, Architekten, Revisoren), Kautionsversicherer — hohes Komplexitätsniveau pro Fall, geringe STP-Quote, aber kleineres Volumen.</div>
+      </div>
+
+      <div class="assumption">
+        <strong>Nicht im Fokus:</strong> Die Mobiliar (eigene NSP + AI-Team), Zurich CH (Guidewire + globales AI-Team), AXA (Konzernlösung). Diese bauen intern — Build > Buy.
+      </div>
+
+      <div class="item" style="margin-top: 0.6rem;">
+        <div class="item-title">Buying Center</div>
+        <div class="item-desc">
+          <strong>Sponsor:</strong> Head of Claims / COO<br>
+          <strong>Evaluator:</strong> Claims Operations Lead<br>
+          <strong>Influencer:</strong> CTO / CDO<br>
+          <strong>Blocker:</strong> CISO (Datenschutz), Aktuariat (Modellrisiko), Compliance (FINMA)
+        </div>
+      </div>
+
+      <div class="num-row">
+        <div class="num-block">
+          <span class="num">5–8</span>
+          <span class="num-label">Zielversicherer CH</span>
+        </div>
+        <div class="num-block">
+          <span class="num">~15</span>
+          <span class="num-label">Erweiterbar DACH</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COST STRUCTURE -->
+  <div class="cell c-cost">
+    <div class="cell-label"><span class="cell-icon">💰</span> Cost Structure</div>
+    <div class="cell-content" style="display: flex; gap: 2rem; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <div class="item">
+          <div class="item-title">ML-Engineering & Domänenexperten</div>
+          <div class="item-desc">3–5 ML Engineers (CHF 150–200K p.a.), 1–2 Versicherungsexperten (CHF 140–180K p.a.). Grösster Kostenblock.</div>
+          <span class="tag tag-rose">~60% der Kosten</span>
+        </div>
+        <div class="item">
+          <div class="item-title">Cloud / GPU-Compute</div>
+          <div class="item-desc">LLM-Inferenzkosten pro Schadenfall, Fine-Tuning-Runs, Swiss Data Center Hosting (Aufpreis vs. US). CHF 80–200K p.a. je nach Volumen.</div>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 200px;">
+        <div class="item">
+          <div class="item-title">Sales & Business Development</div>
+          <div class="item-desc">1–2 Enterprise Sales (CHF 160–220K OTE), BD/Marketing, Messe-/Eventkosten. Langer Verkaufszyklus → hoher CAC.</div>
+          <span class="tag tag-amber">~25% der Kosten</span>
+        </div>
+        <div class="item">
+          <div class="item-title">Integrations-Engineering</div>
+          <div class="item-desc">Konnektoren-Entwicklung und -Wartung für Guidewire, Adcubum, Eigenentwicklungen. Pro Neukunde: 2–4 Monate Integrationsaufwand.</div>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 200px;">
+        <div class="assumption">
+          <strong>Burn Rate Schätzung (Pre-Revenue):</strong> CHF 1.5–2.5 Mio. p.a. bei 8–12 FTE. Runway-Anforderung: mind. 18–24 Monate bis erstem zahlenden Produktionskunden (6 Mo. Sales + 6 Mo. POC + 6 Mo. Go-Live).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REVENUE STREAMS -->
+  <div class="cell c-revenue">
+    <div class="cell-label"><span class="cell-icon">🏦</span> Revenue Streams</div>
+    <div class="cell-content" style="display: flex; gap: 2rem; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <div class="item">
+          <div class="item-title">SaaS-Lizenz (per Claim Volume)</div>
+          <div class="item-desc">CHF 5–15 pro triagiertem komplexem Schadenfall. Bei 5'000–15'000 relevanten Fällen p.a. pro Versicherer: <strong>CHF 75K–225K ARR pro Kunde</strong>.</div>
+          <span class="tag tag-green">RECURRING</span>
+        </div>
+        <div class="item">
+          <div class="item-title">Implementation Fee</div>
+          <div class="item-desc">Einmalig CHF 80–200K für Integration, Konfiguration, initiales Fine-Tuning auf Kundendaten. Deckt teilweise den Integrationsaufwand.</div>
+        </div>
+      </div>
+      <div style="flex: 1; min-width: 200px;">
+        <div class="item">
+          <div class="item-title">Optional: Success-Based Component</div>
+          <div class="item-desc">Bonus bei nachgewiesener Accuracy >95% oder messbarer Reduktion der Durchlaufzeit. Senkt Einstiegshürde für risikoscheue Versicherer.</div>
+          <span class="tag tag-amber">PILOT-MODELL</span>
+        </div>
+        <div class="num-row">
+          <div class="num-block">
+            <span class="num">CHF 0.5–1.8M</span>
+            <span class="num-label">ARR bei 5 Kunden (Ziel Y3)</span>
+          </div>
+        </div>
+        <div class="assumption">
+          <strong>Skalierung:</strong> DACH-Markt (~15 Add'l Targets) kann ARR auf CHF 3–5M bringen. Darüber hinaus: Nischen-Exit oder Akquisition durch Guidewire/FRISS/Sapiens wahrscheinlicher als Standalone-Scale.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="page-footer">
+  <span>Claimflow AI AG · Business Model Canvas · Basierend auf Deep-Dive-Analyse Claims Processing Schweizer Versicherungen</span>
+  <span>Template: Strategyzer AG (CC BY-SA 3.0)</span>
+</div>
+
+</body>
+</html>

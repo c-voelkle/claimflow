@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Dive: Schritte 02–05 · Schadenbearbeitung CH</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0C0F14;
+    --surface: #151921;
+    --surface-2: #1C2230;
+    --surface-3: #242B38;
+    --text: #E8EAF0;
+    --text-muted: #8B92A5;
+    --text-dim: #5A6175;
+    --accent: #F59E0B;
+    --accent-soft: rgba(245,158,11,0.12);
+    --manual: #EF6461;
+    --manual-bg: rgba(239,100,97,0.1);
+    --automated: #60D394;
+    --automated-bg: rgba(96,211,148,0.1);
+    --hybrid: #7EB6FF;
+    --hybrid-bg: rgba(126,182,255,0.1);
+    --border: rgba(255,255,255,0.06);
+    --border-hover: rgba(255,255,255,0.12);
+    --glow: rgba(245,158,11,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Instrument Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container { max-width: 1140px; margin: 0 auto; padding: 0 2rem; }
+
+  /* HEADER */
+  header {
+    padding: 4rem 0 3rem;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 300px;
+    background: radial-gradient(ellipse at 30% 0%, rgba(245,158,11,0.06) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .breadcrumb {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+    font-optical-sizing: auto;
+  }
+  header h1 span { color: var(--accent); }
+  .subtitle {
+    font-size: 1rem;
+    color: var(--text-muted);
+    max-width: 680px;
+    font-weight: 400;
+  }
+
+  /* STEP NAVIGATION */
+  .step-nav {
+    display: flex;
+    gap: 1px;
+    margin: 2.5rem 0 0;
+    background: var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .step-nav-item {
+    flex: 1;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: center;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Instrument Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .step-nav-item:hover { background: var(--surface-2); color: var(--text); }
+  .step-nav-item.active {
+    background: var(--surface-2);
+    color: var(--accent);
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+  .step-nav-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    display: block;
+    margin-bottom: 0.25rem;
+    opacity: 0.5;
+  }
+
+  /* STEP SECTIONS */
+  .step-section {
+    padding: 3rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .step-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .step-badge {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .step-badge.hybrid { background: linear-gradient(135deg, #5B9BF0, #7EB6FF); }
+  .step-badge.automated { background: linear-gradient(135deg, #3EAF76, #60D394); }
+
+  .step-header-text h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.6rem;
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+  }
+  .step-header-text .type-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .type-label.hybrid { background: var(--hybrid-bg); color: var(--hybrid); }
+  .type-label.automated { background: var(--automated-bg); color: var(--automated); }
+
+  /* CONTENT GRID */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+  .content-grid.single { grid-template-columns: 1fr; }
+  .content-grid.triple { grid-template-columns: 1fr 1fr 1fr; }
+
+  .grid-cell {
+    padding: 1.5rem;
+    background: var(--surface);
+  }
+  .grid-cell.full { grid-column: 1 / -1; }
+
+  .cell-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+    font-weight: 500;
+  }
+  .cell-body {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+  .cell-body strong { color: var(--text); font-weight: 600; }
+
+  /* TOOL CARDS */
+  .tools-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  .tool-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem 1.25rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .tool-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .tool-name {
+    font-weight: 700;
+    font-size: 0.88rem;
+    margin-bottom: 0.2rem;
+    color: var(--text);
+  }
+  .tool-vendor {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+  .tool-desc {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+  .tool-tag {
+    display: inline-block;
+    padding: 0.12rem 0.45rem;
+    border-radius: 3px;
+    font-size: 0.62rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+  .tool-tag.core { background: var(--accent-soft); color: var(--accent); }
+  .tool-tag.addon { background: var(--hybrid-bg); color: var(--hybrid); }
+  .tool-tag.niche { background: var(--automated-bg); color: var(--automated); }
+  .tool-tag.fraud { background: var(--manual-bg); color: var(--manual); }
+
+  /* HAFTPFLICHT CALLOUT */
+  .callout {
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 1.25rem 1.5rem;
+    margin: 1.25rem 0;
+  }
+  .callout-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+  }
+  .callout-body {
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    line-height: 1.65;
+  }
+  .callout-body strong { color: var(--text); }
+
+  /* SOURCES */
+  .sources-section {
+    padding: 2.5rem 0 3rem;
+  }
+  .sources-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  .source-item {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+    transition: background 0.3s;
+    border-radius: 4px;
+    padding-left: 0.5rem;
+    margin-left: -0.5rem;
+  }
+  .source-item:target {
+    background: var(--accent-soft);
+    animation: highlightFade 2s ease forwards;
+  }
+  @keyframes highlightFade {
+    0% { background: rgba(245,158,11,0.25); }
+    100% { background: transparent; }
+  }
+  .source-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+  .source-text {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+  .source-text a {
+    color: var(--hybrid);
+    text-decoration: none;
+  }
+  .source-text a:hover { text-decoration: underline; }
+
+  .ref-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    background: var(--accent-soft);
+    padding: 0.05rem 0.3rem;
+    border-radius: 3px;
+    transition: background 0.15s, color 0.15s;
+    cursor: pointer;
+  }
+  .ref-link:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  /* SUB-STEP LIST */
+  .substep-list {
+    list-style: none;
+    margin: 0.5rem 0;
+  }
+  .substep-list li {
+    position: relative;
+    padding: 0.35rem 0 0.35rem 1.5rem;
+    font-size: 0.84rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+  .substep-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+  }
+  .substep-list li strong { color: var(--text); }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .content-grid, .content-grid.triple { grid-template-columns: 1fr; }
+    .tools-grid { grid-template-columns: 1fr; }
+    .step-nav { flex-direction: column; }
+    header h1 { font-size: 1.8rem; }
+  }
+
+  /* ANIMATIONS */
+  .step-section {
+    opacity: 0;
+    transform: translateY(12px);
+    animation: fadeIn 0.4s ease forwards;
+  }
+  .step-section:nth-child(1) { animation-delay: 0.05s; }
+  .step-section:nth-child(2) { animation-delay: 0.15s; }
+  .step-section:nth-child(3) { animation-delay: 0.25s; }
+  .step-section:nth-child(4) { animation-delay: 0.35s; }
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="breadcrumb">Prozessanalyse · Deep Dive · Haftpflicht & Sach · Schweiz</div>
+    <h1>Schritte <span>02 – 05</span> im Detail</h1>
+    <p class="subtitle">Von der Schadenmeldung bis zur Triage – mit konkreten Tools, Schweizer Marktakteuren und Besonderheiten bei Haftpflicht- und Sachschadenfällen bei Versicherern mit hohem Fallvolumen.</p>
+
+    <nav class="step-nav">
+      <div class="step-nav-item active" data-target="step-02"><span class="step-nav-num">02</span>Schadenmeldung</div>
+      <div class="step-nav-item" data-target="step-03"><span class="step-nav-num">03</span>Registrierung</div>
+      <div class="step-nav-item" data-target="step-04"><span class="step-nav-num">04</span>Deckungsprüfung</div>
+      <div class="step-nav-item" data-target="step-05"><span class="step-nav-num">05</span>Triage</div>
+    </nav>
+  </header>
+
+  <!-- ===================== SCHRITT 02 ===================== -->
+  <section class="step-section" id="step-02">
+    <div class="step-header">
+      <div class="step-badge hybrid">02</div>
+      <div class="step-header-text">
+        <h2>Schadenmeldung (FNOL – First Notice of Loss)</h2>
+        <span class="type-label hybrid">Hybrid · manuell + automatisiert</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag">Prozessbeschreibung im Detail</div>
+        <div class="cell-body">
+          Die Schadenmeldung ist der erste Kontakt des Versicherten mit dem Versicherer nach dem Schadenereignis. Bei Schweizer Versicherern mit hohen Fallvolumen (AXA, Mobiliar, Zurich, Helvetia, Baloise) existieren typischerweise <strong>vier bis fünf parallele Eingangskanäle</strong>, die je nach Kundensegment (Privat, KMU, Grosskunden) unterschiedlich gewichtet werden.
+
+          <ul class="substep-list">
+            <li><strong>Self-Service-Portal / App:</strong> Kunden melden über Portale wie «myAXA», «Meine Mobiliar» oder das Helvetia-Kundenportal ihren Schaden digital. Ein Wizard führt schrittweise durch die Erfassung (Policennummer, Schadendatum, -ort, Beschreibung, Foto-Upload). Bei Haftpflicht: zusätzlich Angaben zum Geschädigten und zur Schadensursache.</li>
+            <li><strong>Telefon / Contact Center:</strong> Schadenhotlines (z.B. Mobiliar: 0800 16 16 16 16, AXA: 0800 809 809, Zurich: 0800 80 80 80) sind 24/7 erreichbar. Contact-Center-Agenten erfassen den Schaden direkt im Claims-System. Bei Haftpflichtschäden wird ein strukturierter Fragebogen zur Haftungslage abgearbeitet.</li>
+            <li><strong>Broker / Generalagenturen:</strong> Insbesondere im KMU-Segment werden Schäden häufig über Broker oder die über 300 Generalagenturen (bei Mobiliar und AXA das dichteste Netz in der CH) gemeldet. Broker nutzen dedizierte Portale oder elektronische Schnittstellen.</li>
+            <li><strong>Postalisch / E-Mail:</strong> Besonders bei komplexen Haftpflichtfällen (z.B. mit Anwaltskorrespondenz) werden Meldungen noch schriftlich eingereicht. Der Eingang erfolgt über Scanning/OCR in den digitalen Prozess.</li>
+            <li><strong>Chatbot / Conversational AI:</strong> Helvetia und weitere Versicherer bieten Schadenmeldungen via Chatbot an. Im Transportversicherungsbereich hat Helvetia eine spezialisierte Schaden-App für LKW-Fahrer im Einsatz.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Besonderheit Haftpflicht</div>
+      <div class="callout-body">
+        Bei Haftpflichtschäden wird die FNOL-Komplexität deutlich höher: Neben dem Versicherten meldet oft <strong>der Geschädigte oder dessen Rechtsvertretung</strong> den Schaden direkt. Es müssen zwei Perspektiven (Verursacher / Geschädigter) parallel erfasst werden. Die Meldung enthält zusätzlich: <strong>Haftungsgrund, Schadenhergang aus Sicht beider Parteien, Zeugenangaben, Polizeirapportnummer</strong>. Bei Personenschäden (Körperverletzung): Angaben zu ärztlicher Behandlung und voraussichtlicher Dauer der Beeinträchtigung. Sunet-Anbindung (UVG-Meldungen) bei betrieblicher Haftpflicht.
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Zuständigkeit</div>
+        <div class="cell-body">
+          <strong>Primär:</strong> Versicherungsnehmer/in, Geschädigte/r, Broker<br>
+          <strong>Versichererseits:</strong> Contact-Center-Agent/in (1st Level), Generalagent/in<br>
+          <strong>Bei digitalem Eingang:</strong> Automatische Vorsystem-Verarbeitung ohne menschliche Intervention
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Automatisierungsgrad</div>
+        <div class="cell-body">
+          <strong>Digitaler Kanal (Portal/App):</strong> ca. 70–80% automatisiert – Daten fliessen direkt ins Claims-System<br>
+          <strong>Telefonischer Kanal:</strong> Manuell mit System-Unterstützung (Agent tippt mit)<br>
+          <strong>Postalisch:</strong> OCR-Scanning, dann manuelle Nachbearbeitung<br>
+          <strong>Zielwert bei volumenstarken Versicherern:</strong> &gt;50% aller FNOL digital
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid single">
+      <div class="grid-cell">
+        <div class="cell-tag">Konkrete Tools & Systeme im Einsatz</div>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-name">Guidewire ClaimCenter</div>
+            <div class="tool-vendor">Guidewire Software (USA) · Cloud & On-Prem</div>
+            <div class="tool-desc">End-to-End Claims Management System – Intake-Modul mit Wizard-basierter dynamischer Schadenerfassung. Integrierte Policensuche (Anbindung PolicyCenter). Im Einsatz u.a. bei <strong>Zurich Schweiz</strong> (seit 2015, implementiert mit EY), <strong>Basler Versicherungen</strong> und <strong>Vaudoise</strong> (als erster CH-Versicherer auf Guidewire Cloud Platform, live seit 2025). <span class="ref-link" data-src="1">[1]</span><span class="ref-link" data-src="2">[2]</span><span class="ref-link" data-src="3">[3]</span></div>
+            <span class="tool-tag core">Kernsystem Claims</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Adcubum Syrius</div>
+            <div class="tool-vendor">Adcubum AG (St. Gallen, CH) · Cloud & On-Prem</div>
+            <div class="tool-desc">Schweizer Marktführer für Kranken- und Unfallversicherungssoftware. ERP-basiert mit modularem Aufbau inkl. Claims-Domäne. Über 50% der Schweizer Bevölkerung sind bei einem Syrius-Kunden versichert. Abdeckung: Partner, Portfolio, Claims, Inkasso/Auszahlung, Workflows, Data Warehouse. Wird von Swisscom als FSP betrieben. <span class="ref-link" data-src="4">[4]</span><span class="ref-link" data-src="5">[5]</span><span class="ref-link" data-src="6">[6]</span></div>
+            <span class="tool-tag core">Kernsystem KVG/UVG</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Eigenentwicklung (Die Mobiliar)</div>
+            <div class="tool-vendor">Die Mobiliar · NSP (Neue Schadenplattform)</div>
+            <div class="tool-desc">Die Mobiliar entschied sich bewusst gegen SAP und Standardlösungen und setzt auf eine selbstentwickelte «Neue Schadenplattform Nicht-Leben und Leben» (NSP). Grund: Vorhandene Standardlösungen erreichten nicht den gewünschten Reifegrad. <span class="ref-link" data-src="7">[7]</span> Die Mobiliar setzt KI zur Schadenklassifizierung ein (SAFe-Organisiert). <span class="ref-link" data-src="8">[8]</span></div>
+            <span class="tool-tag core">Kernsystem Claims</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">in|sure General Claims</div>
+            <div class="tool-vendor">adesso insurance solutions (DE/CH)</div>
+            <div class="tool-desc">Branchenlösung für Sach-, Haftpflicht-, Unfall- und MF-Versicherungen. End-to-End Schadenbearbeitung ohne Systemwechsel. Hoher Automatisierungsgrad für STP. Schweizer Anbindung via adesso-Niederlassung CH. Integration mit Accident Tool App (BBG Solutions, entwickelt mit Basler Kantonspolizei). <span class="ref-link" data-src="9">[9]</span><span class="ref-link" data-src="10">[10]</span></div>
+            <span class="tool-tag core">Kernsystem Claims</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Genesys Cloud / Five9 / Avaya</div>
+            <div class="tool-vendor">Diverse CTI/ACD-Anbieter</div>
+            <div class="tool-desc">Contact-Center-Plattformen für die telefonische Schadenhotline. Automatische Anrufverteilung (ACD), IVR-Menüführung, CTI-Integration ins Claims-System (Screen Pop mit Kundendaten bei eingehendem Anruf). Grössere CH-Versicherer betreiben eigene Contact Center mit 50–200+ Agents.</div>
+            <span class="tool-tag addon">Contact Center</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Kundenportale (myAXA, Meine Mobiliar, Helvetia Online)</div>
+            <div class="tool-vendor">Eigenentwicklungen der jeweiligen Versicherer</div>
+            <div class="tool-desc">Web- und App-basierte Self-Service-Portale für digitale Schadenmeldung. Schritt-für-Schritt-Wizard, Foto-Upload, GPS-Standorterfassung, Statustracking. Helvetia bietet zusätzlich einen Chatbot-gestützten Meldekanal und eine spezialisierte Transport-Schaden-App. <span class="ref-link" data-src="11">[11]</span><span class="ref-link" data-src="12">[12]</span></div>
+            <span class="tool-tag addon">Self-Service Frontend</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCHRITT 03 ===================== -->
+  <section class="step-section" id="step-03">
+    <div class="step-header">
+      <div class="step-badge hybrid">03</div>
+      <div class="step-header-text">
+        <h2>Registrierung & Erfassung (Dossier-Eröffnung)</h2>
+        <span class="type-label hybrid">Hybrid · manuell + automatisiert</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag">Prozessbeschreibung im Detail</div>
+        <div class="cell-body">
+          Nach Eingang der FNOL wird ein <strong>Schadendossier</strong> im Kern-Claims-System eröffnet. Dieser Schritt ist der Übergang von der kundenseitigen Meldung in den internen Bearbeitungsprozess. Bei hohen Fallvolumen ist die Geschwindigkeit und Fehlerfreiheit dieses Schritts entscheidend für die Gesamtdurchlaufzeit.
+
+          <ul class="substep-list">
+            <li><strong>Policenabgleich:</strong> Automatische Verknüpfung der Schadenmeldung mit der korrekten Police über Policennummer oder Kundennummer. Abgleich mit dem Policenverwaltungssystem (PAS). Bei Haftpflicht: Prüfung, ob Meldender = Versicherungsnehmer oder Geschädigter.</li>
+            <li><strong>Dossiernummer-Vergabe:</strong> Systemseitige Eröffnung eines eindeutigen Schadendossiers mit Dossiernummer (Claim ID). Zuordnung zu Sparte (Sach, Haftpflicht, MF etc.) und Schadenart.</li>
+            <li><strong>Dokumentenzuordnung:</strong> Alle eingegangenen Dokumente (Fotos, Polizeirapport, Korrespondenz, Arztzeugnis) werden via DMS dem Dossier zugeordnet. Bei digitalem Eingang automatisch, bei postalischem Eingang nach OCR-Verarbeitung.</li>
+            <li><strong>Vollständigkeitsprüfung:</strong> Automatisierte Prüfung, ob alle Pflichtfelder ausgefüllt sind. Bei Lücken: automatische Nachforderung (E-Mail/Push-Notification an Kunden) oder Aufgabe an Contact Center.</li>
+            <li><strong>Erstvalidierung:</strong> Bei digital erfassten Meldungen: regelbasierte Plausibilitätschecks (z.B. Schadendatum vor Policenstart? Doppelmeldung? Plausibilität der Schadenart zur Police?).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Besonderheit Haftpflicht</div>
+      <div class="callout-body">
+        Haftpflichtdossiers haben eine <strong>grundlegend andere Struktur</strong> als Sachdossiers. Sie enthalten mindestens zwei Parteien (Versicherungsnehmer als Verursacher + Geschädigter). Das System muss <strong>Forderungen Dritter</strong> abbilden können, nicht nur Eigenansprüche. Bei Betriebshaftpflicht mit mehreren Geschädigten: Eröffnung von <strong>Teildossiers pro Geschädigtem</strong> unter einem Hauptdossier. Bei Berufshaftpflicht (z.B. Ärzte, Architekten): besondere Dokumentationsanforderungen wegen langer Verjährungsfristen (bis 10 Jahre). <strong>Sunet-Schnittstelle</strong> für die Anbindung an UVG-Meldeprozesse bei Arbeitsunfällen.
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Zuständigkeit</div>
+        <div class="cell-body">
+          <strong>Bei digitalen Meldungen:</strong> Vollautomatisch durch Claims-System (Dossiereröffnung ohne menschliches Zutun)<br>
+          <strong>Bei telefonisch/postalisch:</strong> Schadeninnendienst / Sachbearbeiter/in<br>
+          <strong>Qualitätsprüfung:</strong> Stichprobenweise durch Teamleitung
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Automatisierungsgrad</div>
+        <div class="cell-body">
+          <strong>STP-Quote bei Standardschäden:</strong> 60–85% (je nach Digitalisierungsgrad des Versicherers)<br>
+          <strong>Manuelle Nacharbeit:</strong> Bei ca. 15–40% der Fälle nötig (fehlende Angaben, unklare Policenzuordnung, Haftpflicht-Doppelmeldungen)
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid single">
+      <div class="grid-cell">
+        <div class="cell-tag">Konkrete Tools & Systeme</div>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-name">Guidewire ClaimCenter – Claim Intake Module</div>
+            <div class="tool-vendor">Guidewire Software</div>
+            <div class="tool-desc">Automatische Dossiereröffnung mit Policenverknüpfung, regelbasierter Vollständigkeitsprüfung und Duplikatserkennung. Unterstützt Mehrparteien-Dossiers (kritisch für Haftpflicht). <span class="ref-link" data-src="1">[1]</span></div>
+            <span class="tool-tag core">Kernsystem</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Dokumentenmanagement (OpenText, d.velop, SER)</div>
+            <div class="tool-vendor">Verschiedene DMS-Anbieter</div>
+            <div class="tool-desc">Enterprise Content Management für revisionssichere Ablage aller Schadendokumente. OCR-Integration für Scanning postalischer Eingänge. Workflow-gesteuerte Dokumentenverteilung. Schweizer Versicherer setzen häufig auf OpenText oder d.velop mit spezifischen Versicherungsmodulen.</div>
+            <span class="tool-tag addon">Dokumentenmanagement</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Adcubum Syrius – Claims-Module</div>
+            <div class="tool-vendor">Adcubum AG</div>
+            <div class="tool-desc">Integriertes Claims-Modul mit durchgängiger Verarbeitung von Erfassung über Beurteilung bis Abrechnung. Optimale Einbindung der Leistungserbringer. Rechnungsverarbeitung mit Tarifsystemabgleich. Automatisierungsfähig über die Syrius Suite (Workflows, Parametrierung). <span class="ref-link" data-src="5">[5]</span><span class="ref-link" data-src="6">[6]</span></div>
+            <span class="tool-tag core">Kernsystem KVG/UVG</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">OCR / Intelligent Document Processing</div>
+            <div class="tool-vendor">ABBYY, Parashift (CH), Insiders Technologies</div>
+            <div class="tool-desc">Automatische Texterkennung und Klassifizierung eingehender Dokumente. Parashift (Schweizer Anbieter) bietet KI-basierte Dokumentenextraktion speziell für Versicherer. Erkennung von Schadenformularen, Policennummern, Rechnungsbeträgen aus unstrukturierten Dokumenten.</div>
+            <span class="tool-tag addon">Dokumentenverarbeitung</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCHRITT 04 ===================== -->
+  <section class="step-section" id="step-04">
+    <div class="step-header">
+      <div class="step-badge automated">04</div>
+      <div class="step-header-text">
+        <h2>Deckungsprüfung</h2>
+        <span class="type-label automated">Überwiegend automatisiert</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag">Prozessbeschreibung im Detail</div>
+        <div class="cell-body">
+          Die Deckungsprüfung ist der <strong>zentrale Entscheidungspunkt</strong>, ob ein gemeldeter Schadenfall überhaupt unter den Versicherungsschutz fällt. Bei Versicherern mit hohem Fallvolumen ist dieser Schritt weitgehend automatisiert – eine Rules Engine prüft systematisch die Bedingungen.
+
+          <ul class="substep-list">
+            <li><strong>Policengültigkeit:</strong> Ist die Police zum Schadenzeitpunkt aktiv? Prämienzahlung aktuell? Karenzfrist abgelaufen?</li>
+            <li><strong>Deckungsumfang:</strong> Fällt die gemeldete Schadenart unter die versicherten Gefahren gemäss AVB (Allgemeine Versicherungsbedingungen)? Prüfung der Produktdatenbank mit allen gültigen Bedingungswerken.</li>
+            <li><strong>Ausschlüsse:</strong> Liegen definierte Ausschlussgründe vor (z.B. Vorsatz, Krieg, Kernenergie, bestimmte Naturereignisse je nach Produkt)?</li>
+            <li><strong>Selbstbehalt:</strong> Berechnung des Selbstbehalts (Franchise) basierend auf Policenbedingungen und Schadenart.</li>
+            <li><strong>Summenbegrenzung:</strong> Prüfung der Versicherungssumme und bereits beanspruchter Teilsummen (Aggregate-Limiten) im laufenden Vertragsjahr.</li>
+            <li><strong>Eskalation:</strong> Bei Grenzfällen oder Spezialklauseln → manuelle Weiterleitung an Fachspezialist/in Deckung oder Underwriting.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Besonderheit Haftpflicht</div>
+      <div class="callout-body">
+        Die Deckungsprüfung bei Haftpflichtfällen ist wesentlich <strong>komplexer</strong> als bei Sachversicherungen. Zuerst muss geprüft werden, ob überhaupt eine <strong>gesetzliche Haftpflicht</strong> besteht (Verschuldenshaftung nach Art. 41 OR, Kausalhaftung, Gefährdungshaftung). Erst dann greift die Deckung. Zusätzliche Prüfpunkte: <strong>Abgrenzung Privathaftpflicht vs. Berufshaftpflicht vs. Betriebshaftpflicht</strong> – ein Schadenfall kann bei falsch zugeordneter Sparte deckungslos sein. Prüfung des <strong>Claims-Made- vs. Occurrence-Prinzips</strong>: Ist der Zeitpunkt der Schadenverursachung oder der Schadenmeldung massgeblich? Bei Produkthaftpflicht: Prüfung, ob das schadenstiftende Produkt während der Vertragslaufzeit in Verkehr gebracht wurde. Diese Fälle erfordern fast immer <strong>manuelle Fachprüfung</strong> und lassen sich kaum vollautomatisiert abwickeln.
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Zuständigkeit</div>
+        <div class="cell-body">
+          <strong>Standardfälle:</strong> Rules Engine / automatisierte Prüfung (kein menschlicher Eingriff)<br>
+          <strong>Grenzfälle:</strong> Fachspezialist/in Deckung<br>
+          <strong>Komplexe HP-Fälle:</strong> Underwriting / Rechtsabteilung<br>
+          <strong>Ablehnungen:</strong> Immer mit Vier-Augen-Prinzip und schriftlicher Begründung
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Automatisierungsgrad</div>
+        <div class="cell-body">
+          <strong>Sachversicherung:</strong> 80–95% automatisiert (klare AVB, einfache Prüflogik)<br>
+          <strong>Haftpflicht einfach:</strong> 50–70% automatisiert (Privathaftpflicht mit klarem Hergang)<br>
+          <strong>Haftpflicht komplex:</strong> 10–30% automatisiert (Berufshaftpflicht, Produkthaftpflicht, Bauherren-HP)
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid single">
+      <div class="grid-cell">
+        <div class="cell-tag">Konkrete Tools & Systeme</div>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-name">Guidewire ClaimCenter – Rules Engine</div>
+            <div class="tool-vendor">Guidewire Software</div>
+            <div class="tool-desc">Konfigurierbare Business Rules für den automatischen Deckungsabgleich. Flexible Regelwerke ermöglichen die Abbildung komplexer Bedingungsstrukturen. Zurich Schweiz nutzt ClaimCenter explizit für alle Sparten inkl. Deckungsprüfung. <span class="ref-link" data-src="1">[1]</span><span class="ref-link" data-src="2">[2]</span></div>
+            <span class="tool-tag core">Kernsystem</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">BRMS (Business Rules Management)</div>
+            <div class="tool-vendor">IBM ODM, Drools, Camunda</div>
+            <div class="tool-desc">Externe Rule Engines für die AVB-Prüfung, häufig zusätzlich zum Claims-Kernsystem eingesetzt. Ermöglichen Fachbereichen die eigenständige Pflege von Regelwerken ohne IT-Deployment. Besonders relevant bei häufig wechselnden Bedingungswerken.</div>
+            <span class="tool-tag addon">Business Rules</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Policenverwaltungssystem (PAS)</div>
+            <div class="tool-vendor">Guidewire PolicyCenter, Adcubum Syrius, Eigenentwicklungen</div>
+            <div class="tool-desc">Das PAS liefert die «Single Source of Truth» für den Deckungsabgleich: Versicherungssummen, AVB-Versionen, Zusatzdeckungen, Selbstbehalte, Laufzeiten. Schnittstelle zwischen PAS und Claims-System ist erfolgskritisch für die Automatisierung der Deckungsprüfung.</div>
+            <span class="tool-tag core">Kernsystem Police</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Produktdatenbank / Tarif-Engine</div>
+            <div class="tool-vendor">Versichererspezifisch</div>
+            <div class="tool-desc">Zentrale Datenbank mit allen gültigen und historischen AVB, Klauseln, Tarifen und Deckungskombinationen. Ermöglicht den automatisierten Abgleich des Schadenfalls gegen den exakten Versicherungsumfang zum Schadenzeitpunkt – inkl. historischer Bedingungswerke.</div>
+            <span class="tool-tag addon">Produktmanagement</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCHRITT 05 ===================== -->
+  <section class="step-section" id="step-05">
+    <div class="step-header">
+      <div class="step-badge automated">05</div>
+      <div class="step-header-text">
+        <h2>Triage & Schadensteuerung</h2>
+        <span class="type-label automated">Überwiegend automatisiert</span>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell full">
+        <div class="cell-tag">Prozessbeschreibung im Detail</div>
+        <div class="cell-body">
+          Nach positiver Deckungsprüfung wird der Schadenfall <strong>klassifiziert, priorisiert und dem korrekten Bearbeitungspfad zugewiesen</strong>. Dieser Schritt ist bei volumenstarken Versicherern hochgradig automatisiert und entscheidet über Bearbeitungsgeschwindigkeit und Kosteneffizienz.
+
+          <ul class="substep-list">
+            <li><strong>Schadenkategorisierung:</strong> Automatische Klassifizierung nach Schadenart, Sparte, geschätzter Schadenhöhe und Komplexität. Die Mobiliar setzt hierfür KI-basierte Schadenklassifizierung ein. <span class="ref-link" data-src="8">[8]</span></li>
+            <li><strong>Bearbeitungspfad-Zuweisung:</strong> Drei typische Pfade:
+              (a) <strong>Dunkelverarbeitung / STP</strong> – Kleinstschäden werden vollautomatisch reguliert (z.B. Glasbruch unter CHF 2'000, einfache Hausrat-Diebstähle);
+              (b) <strong>Standard-Bearbeitung</strong> – Zuweisung an Sachbearbeiter/in im Innendienst;
+              (c) <strong>Spezialistenbearbeitung</strong> – Grossschäden, komplexe Haftpflichtfälle, Personenschäden → Zuweisung an Senior-Regulierer/in oder Spezialabteilung.</li>
+            <li><strong>Fraud-Screening:</strong> Gleichzeitig mit der Triage erfolgt ein automatisches Fraud-Screening. Verdächtige Muster (z.B. Schadenhäufung, Meldung kurz nach Policenbeginn, auffällige Schadenbilder) werden geflaggt und ggf. an die SIU (Special Investigation Unit) weitergeleitet.</li>
+            <li><strong>Workload-Balancing:</strong> Automatische Zuweisung an verfügbare Sachbearbeitende unter Berücksichtigung von Kapazität, Spezialisierung und Regionalkompetenz.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="callout-title">Besonderheit Haftpflicht</div>
+      <div class="callout-body">
+        Haftpflichtfälle werden bei der Triage fast immer <strong>höher eskaliert</strong> als vergleichbare Sachschäden. Gründe: Die Haftungsfrage muss juristisch geklärt werden (anders als bei Sachschäden, wo die Schadensursache meist klar ist). <strong>Personenschäden</strong> in der Haftpflicht haben das höchste Eskalationspotenzial (Rentenansprüche, Genugtuung gemäss Art. 47 OR, lange Abwicklungsdauer). Der Fraud-Score wird bei Haftpflicht anders kalibriert: <strong>Kollusionsbetrug</strong> (fingierte Ansprüche zwischen bekannten Parteien) ist ein spezifisches Risiko. Bei Betriebshaftpflicht mit hohen Streitwerten (>CHF 100'000): direkte Zuweisung an <strong>Grossschaden-Team</strong> mit juristischer Begleitung.
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="grid-cell">
+        <div class="cell-tag">Zuständigkeit</div>
+        <div class="cell-body">
+          <strong>Triage-Entscheid:</strong> Rules Engine + ML-Scoring (automatisiert)<br>
+          <strong>Fraud-Flagging:</strong> Fraud-Detection-System (automatisiert), SIU bei Verdacht<br>
+          <strong>Zuteilung:</strong> Workflow Engine mit Workload-Logik<br>
+          <strong>Überschreibung:</strong> Teamleitung Claims (manuell bei Sonderfällen)
+        </div>
+      </div>
+      <div class="grid-cell">
+        <div class="cell-tag">Automatisierungsgrad</div>
+        <div class="cell-body">
+          <strong>Kategorisierung & Routing:</strong> 85–95% automatisiert<br>
+          <strong>STP-Anteil (vollautomatische Regulierung):</strong> 15–30% aller Schäden (vor allem Sach-Kleinstschäden). Adcubum-Kunden berichten über Zielwerte von >50% bei Krankenversicherungsbelegen. <span class="ref-link" data-src="6">[6]</span><br>
+          <strong>Fraud-Screening:</strong> 100% automatisiert (jeder Fall durchläuft Scoring), manuelle Nachprüfung bei ca. 3–5% der Fälle
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid single">
+      <div class="grid-cell">
+        <div class="cell-tag">Konkrete Tools & Systeme</div>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-name">FRISS (Fraud, Risk & Compliance)</div>
+            <div class="tool-vendor">FRISS (NL) · SaaS</div>
+            <div class="tool-desc">Marktführer für KI-gestützte Fraud Detection im P&C-Bereich. Hybrides Erkennungsmodell: AI, Netzwerkanalyse, Text Mining, regelbasierte Indikatoren, externe Datenquellen. Echtzeit-Scoring jedes eingehenden Schadenfalls. Integration mit Guidewire, Sapiens, Keylane u.a. Im Einsatz bei über 175 Versicherern in 40+ Ländern. <span class="ref-link" data-src="13">[13]</span><span class="ref-link" data-src="14">[14]</span></div>
+            <span class="tool-tag fraud">Fraud Detection</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">RiskShield 360°</div>
+            <div class="tool-vendor">Experian / 3C (DE/CH) · SaaS</div>
+            <div class="tool-desc">Betrugserkennungssoftware speziell für den deutschsprachigen Versicherungsmarkt. Wird direkt im Schadensystem integriert und greift auf interne und externe Daten zu. Prüfung bereits bei der Schadenanlage. Bei positivem Ergebnis: automatische Weiterleitung in Regulierungsprozess. <span class="ref-link" data-src="15">[15]</span></div>
+            <span class="tool-tag fraud">Fraud Detection</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">ti&m Claim Management Agent</div>
+            <div class="tool-vendor">ti&m AG (Zürich, CH) · On-Prem / CH Private Cloud</div>
+            <div class="tool-desc">Schweizer KI-Agent für automatisierte Schadenbearbeitung mit integrierter Fraud Detection. Nutzt Deep Learning, Anomalie-Erkennung, Deepfake-Analyse und multimodale Foundation Models. Bildanalyse, Geo-Checks und automatische Kostenschätzung. Entwickelt in der Schweiz, betreibbar on-premise oder in Swiss Private Cloud. <span class="ref-link" data-src="16">[16]</span></div>
+            <span class="tool-tag niche">KI-Agent (CH)</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Guidewire ClaimCenter – Workflow & Segmentation Engine</div>
+            <div class="tool-vendor">Guidewire Software</div>
+            <div class="tool-desc">Regelbasierte Schadensegmentierung und automatische Zuweisung an Bearbeitende. Konfigurierbare Workplans pro Schadenart. Unterstützung von STP-Pfaden für Kleinstschäden und Grossschaden-Eskalation. «Dynamic business rules ensure all appropriate steps are taken.» <span class="ref-link" data-src="1">[1]</span></div>
+            <span class="tool-tag core">Kernsystem</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">KI-basierte Schadenklassifizierung</div>
+            <div class="tool-vendor">Eigenentwicklungen (z.B. Die Mobiliar, Helvetia)</div>
+            <div class="tool-desc">ML-Modelle zur automatischen Kategorisierung eingehender Schäden nach Komplexität, voraussichtlicher Schadenhöhe und Bearbeitungsaufwand. Die Mobiliar präsentierte ihren Ansatz der «Schadenklassifizierung mittels Künstlicher Intelligenz als Grundlage für die Automatisierung» am ZHAW Fokus Claims Management. <span class="ref-link" data-src="8">[8]</span></div>
+            <span class="tool-tag niche">Machine Learning</span>
+          </div>
+          <div class="tool-card">
+            <div class="tool-name">Camunda / Flowable</div>
+            <div class="tool-vendor">Open Source BPM</div>
+            <div class="tool-desc">Business Process Management Engines für die Orchestrierung der Schadensteuerung. Modellierung und Ausführung von BPMN-Prozessen für das Claims-Routing. Werden oft als ergänzende Workflow-Schicht über dem Claims-Kernsystem eingesetzt, insbesondere bei Eigenentwicklungen.</div>
+            <span class="tool-tag addon">Workflow / BPM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== QUELLEN ===================== -->
+  <section class="sources-section">
+    <h2 class="sources-title">Quellen</h2>
+
+    <div class="source-item" id="src-1">
+      <div class="source-num">1</div>
+      <div class="source-text">Guidewire – ClaimCenter Claims Management Software. <a target="_blank" rel="noopener" href="https://www.guidewire.com/products/core-products/insurancesuite/claimcenter-claims-management-software">guidewire.com</a></div>
+    </div>
+    <div class="source-item" id="src-2">
+      <div class="source-num">2</div>
+      <div class="source-text">Guidewire – Zurich Insurance selects Guidewire for Swiss Claims System (2015). <a target="_blank" rel="noopener" href="https://www.guidewire.com/about/press-center/press-releases/20150420/zurich-selects-guidewire-swiss-claims-system">guidewire.com/press</a></div>
+    </div>
+    <div class="source-item" id="src-3">
+      <div class="source-num">3</div>
+      <div class="source-text">HZ Insurance – Vaudoise setzt auf Guidewire Cloud Platform (Januar 2026). Vaudoise als erster Schweizer Versicherer auf Guidewire Cloud; Basler Versicherungen ebenfalls Guidewire-Kunde. <a target="_blank" rel="noopener" href="https://www.handelszeitung.ch/insurance/vaudoise-setzt-auf-guidewire-cloud-platform-898196">handelszeitung.ch</a></div>
+    </div>
+    <div class="source-item" id="src-4">
+      <div class="source-num">4</div>
+      <div class="source-text">Swiss Made Software – Insurance Providers from Switzerland. Adcubum Syrius als ERP-basierte Komplettlösung inkl. Claims, Portfolio, Data Warehousing. <a target="_blank" rel="noopener" href="https://www.swissmadesoftware.org/en/produkte-und-services/liste/236522ec-b254-47b8-9586-45c551709a0f/financial/insurance.html">swissmadesoftware.org</a></div>
+    </div>
+    <div class="source-item" id="src-5">
+      <div class="source-num">5</div>
+      <div class="source-text">Adcubum – Unsere Lösung: Gesundheits- und Unfallversicherung. Claims-Bereich mit Erfassung, Beurteilung, Abrechnung und Leistungserbringer-Anbindung. <a target="_blank" rel="noopener" href="https://www.adcubum.com/de/unsere-loesung">adcubum.com</a></div>
+    </div>
+    <div class="source-item" id="src-6">
+      <div class="source-num">6</div>
+      <div class="source-text">Swiss Made Software Case Study – Adcubum: «Über die Hälfte der Schweizer Bevölkerung ist bei einem Syrius-Kunden versichert.» E-Claim Plus verarbeitet 150'000 Belege in 210 Minuten. <a target="_blank" rel="noopener" href="https://www.swissmadesoftware.org/en/blog/the-book-vol-4/case-studies/150000-rechnungen-belege-in-240-minuten.html">swissmadesoftware.org</a></div>
+    </div>
+    <div class="source-item" id="src-7">
+      <div class="source-num">7</div>
+      <div class="source-text">inside-it.ch – «Mobiliar entscheidet sich gegen SAP und für Eigenentwicklung.» Neue Schadenplattform Nicht-Leben und Leben (NSP). <a target="_blank" rel="noopener" href="https://www.inside-it.ch/articles/24649">inside-it.ch</a></div>
+    </div>
+    <div class="source-item" id="src-8">
+      <div class="source-num">8</div>
+      <div class="source-text">ZHAW Institut für Risk & Insurance – Fokus Claims Management. Referate u.a. von Die Mobiliar (KI-Schadenklassifizierung, SAFe) und Baloise (Elementarschäden). <a target="_blank" rel="noopener" href="https://www.zhaw.ch/de/sml/institute-zentren/iri/veranstaltungen/fokus-claims-management">zhaw.ch</a></div>
+    </div>
+    <div class="source-item" id="src-9">
+      <div class="source-num">9</div>
+      <div class="source-text">adesso insure – in|sure General Claims: Claims Management für Sach, Haftpflicht, Unfall und MF. Schweizer Anbindung über adesso CH. <a target="_blank" rel="noopener" href="https://www.adesso-insure.de/en/general-claims">adesso-insure.de</a></div>
+    </div>
+    <div class="source-item" id="src-10">
+      <div class="source-num">10</div>
+      <div class="source-text">adesso insure Blog – Software im Schadenfall: Integration mit Accident Tool App (BBG Solutions / Basler Kantonspolizei) und 3C Schadenplattform. <a target="_blank" rel="noopener" href="https://blog.adesso-insure.de/en/business/software-event-of-claim">blog.adesso-insure.de</a></div>
+    </div>
+    <div class="source-item" id="src-11">
+      <div class="source-num">11</div>
+      <div class="source-text">HZ Insurance – «Wie digital sind Schweizer Versicherungen?» Schadenmeldung via Chatbot (Helvetia), myAXA, Sunet-Anbindung, digitale Bearbeitung Sach- und Haftpflicht. <a target="_blank" rel="noopener" href="https://www.handelszeitung.ch/insurance/digitalisierung-papierkrieg-ade-das-bieten-schweizer-versicherer-im-netz">handelszeitung.ch</a></div>
+    </div>
+    <div class="source-item" id="src-12">
+      <div class="source-num">12</div>
+      <div class="source-text">Helvetia – Schaden melden. Schrittweise Online-Schadenmeldung für Privat- und Firmenkunden, Schadencheck-Tool. <a target="_blank" rel="noopener" href="https://www.helvetia.com/ch/web/de/privatkunden/kontakt/schaden-melden.html">helvetia.com</a></div>
+    </div>
+    <div class="source-item" id="src-13">
+      <div class="source-num">13</div>
+      <div class="source-text">FRISS – Trust Automation Platform for P&C Insurers. Hybrid Detection (AI, Netzwerkanalyse, Text Mining), 175+ Versicherer in 40+ Ländern. <a target="_blank" rel="noopener" href="https://www.friss.com/">friss.com</a></div>
+    </div>
+    <div class="source-item" id="src-14">
+      <div class="source-num">14</div>
+      <div class="source-text">Microsoft AppSource – FRISS Claims Analytics: Integration mit Guidewire, Sapiens, Keylane. SaaS, AI-powered Echtzeit-Fraud-Scoring. <a target="_blank" rel="noopener" href="https://marketplace.microsoft.com/en-us/product/web-apps/frissfraudebestrijdingbv1691571690271.friss_claims_2023_2">marketplace.microsoft.com</a></div>
+    </div>
+    <div class="source-item" id="src-15">
+      <div class="source-num">15</div>
+      <div class="source-text">Experian / 3C – Claims Management: RiskShield 360° Betrugserkennungssoftware mit Schadensystem-Integration. <a target="_blank" rel="noopener" href="https://www.experian.ch/business/claims-management-by-3c/claims-management">experian.ch</a></div>
+    </div>
+    <div class="source-item" id="src-16">
+      <div class="source-num">16</div>
+      <div class="source-text">ti&m – Claim Management Agent: Swiss-made KI-Agent mit Deep Learning, Deepfake-Analyse, Anomalie-Erkennung. On-Premise oder Swiss Private Cloud. <a target="_blank" rel="noopener" href="https://www.ti8m.com/en/products/AI-Agents-Hub/Claims-Management-Agent">ti8m.com</a></div>
+    </div>
+  </section>
+
+</div>
+
+
+<script>
+  // Step navigation: click to scroll
+  document.querySelectorAll('.step-nav-item').forEach(function(item) {
+    item.addEventListener('click', function() {
+      var targetId = this.getAttribute('data-target');
+      var target = document.getElementById(targetId);
+      if (target) {
+        // Update active state
+        document.querySelectorAll('.step-nav-item').forEach(function(n) { n.classList.remove('active'); });
+        this.classList.add('active');
+        // Scroll
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Source references: click to scroll to source
+  document.querySelectorAll('.ref-link').forEach(function(ref) {
+    ref.addEventListener('click', function() {
+      var srcId = 'src-' + this.getAttribute('data-src');
+      var target = document.getElementById(srcId);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight animation
+        target.style.background = 'rgba(245,158,11,0.25)';
+        target.style.borderRadius = '4px';
+        setTimeout(function() {
+          target.style.transition = 'background 1.5s ease';
+          target.style.background = 'transparent';
+        }, 200);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>
